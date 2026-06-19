@@ -1,0 +1,2556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THEMISIA SOX v2.0 — Controles de Negócios</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --blue:#003087;--yellow:#F5A800;--green:#009B3A;--red:#c0392b;
+  --bg:#F4F6FA;--sidebar:#001f5e;--card:#fff;--border:#dde3ef;
+  --text:#1a2340;--muted:#6b7a99;
+  --ok:#2b8a3e;--warn:#e67700;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+
+/* ── LAYOUT ── */
+#app-header{position:fixed;top:0;left:0;right:0;height:58px;background:var(--blue);
+  display:flex;align-items:center;gap:14px;padding:0 20px;z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);}
+#app-header h1{color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px;line-height:1.2;}
+#app-header h1 span{color:var(--yellow);font-size:12px;display:block;font-weight:400;}
+
+#app-sidebar{position:fixed;top:58px;left:0;bottom:0;width:220px;background:var(--sidebar);
+  overflow-y:auto;z-index:90;display:flex;flex-direction:column;}
+#app-main{margin-top:58px;margin-left:220px;min-height:calc(100vh - 58px);padding:28px 32px;}
+
+/* ── SIDEBAR NAV ── */
+.nav-section{padding:16px 14px 6px;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);
+  letter-spacing:1.5px;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,.78);
+  cursor:pointer;font-size:13px;border-left:3px solid transparent;transition:all .15s;}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff;}
+.nav-item.active{background:rgba(245,168,0,.15);border-left-color:var(--yellow);color:var(--yellow);font-weight:600;}
+.nav-item.nav-disabled{opacity:.38;cursor:not-allowed;}
+.nav-sub{display:flex;align-items:center;gap:8px;padding:6px 16px 6px 36px;
+  color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;transition:all .15s;}
+.nav-sub:hover{color:rgba(255,255,255,.85);}
+.nav-sub.active{color:var(--yellow);}
+.nav-footer{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);}
+.nav-footer .ver{color:rgba(255,255,255,.55);font-size:11px;font-weight:700;}
+.nav-footer .sub{color:rgba(255,255,255,.3);font-size:10px;margin-top:2px;}
+#lock-btn{background:none;border:none;color:rgba(255,255,255,.25);font-size:14px;cursor:pointer;
+  float:right;padding:2px 4px;}
+#lock-btn:hover{color:rgba(255,255,255,.5);}
+
+/* ── PANELS ── */
+.pnl{display:none;}
+.pnl.show{display:block;}
+
+/* ── CARDS / SECTIONS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:22px 26px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.card-title{font-size:15px;font-weight:700;color:var(--blue);margin-bottom:14px;
+  padding-bottom:10px;border-bottom:2px solid var(--border);}
+.page-title{font-size:20px;font-weight:800;color:var(--blue);margin-bottom:20px;}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;max-width:540px;}
+.search-wrap input{width:100%;padding:11px 16px;border:2px solid var(--border);border-radius:8px;
+  font-size:14px;outline:none;transition:border .2s;}
+.search-wrap input:focus{border-color:var(--blue);}
+#sr{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);
+  border-radius:0 0 8px 8px;max-height:340px;overflow-y:auto;z-index:200;display:none;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);}
+.si{padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;}
+.si:hover{background:#f5f7ff;}
+.sid{font-weight:700;color:var(--blue);font-size:12px;font-family:monospace;}
+.sn2{font-size:13px;color:var(--text);margin-top:2px;}
+.ss{font-size:11px;color:var(--muted);}
+
+/* ── CTRL INFO CARD ── */
+#ctrl-card{display:none;margin-top:16px;}
+.ctrl-id{font-family:monospace;font-weight:800;font-size:18px;color:var(--blue);}
+.ctrl-nome{font-size:15px;font-weight:700;margin:6px 0;}
+.ctrl-meta{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.8;}
+.bdg{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;
+  background:#eee;color:#555;}
+.bdg-r{background:#ffeaea;color:var(--red);}
+.bdg-y{background:#fff8e1;color:#b7791f;}
+.bdg-g{background:#e6f9f0;color:var(--ok);}
+
+/* ── FILE STATUS ── */
+#file-status{font-size:12px;color:var(--muted);margin-top:8px;display:block;}
+#file-input-row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap;}
+
+/* ── BUTTONS ── */
+.btn-primary{background:var(--blue);color:#fff;border:none;padding:9px 20px;border-radius:7px;
+  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
+.btn-primary:hover{background:#002070;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-primary.btn-lg{padding:12px 28px;font-size:14px;}
+.btn-sec{background:#fff;color:var(--blue);border:1.5px solid var(--blue);padding:8px 18px;
+  border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.btn-sec:hover{background:#f0f4ff;}
+.btn-edit-sm{background:#f0f4ff;color:var(--blue);border:1px solid var(--border);padding:3px 8px;
+  border-radius:4px;font-size:11px;cursor:pointer;margin-left:8px;}
+.btn-del-sm{background:#ffeaea;color:var(--red);border:1px solid #ffc9c9;padding:3px 8px;
+  border-radius:4px;font-size:11px;cursor:pointer;margin-left:4px;}
+.btn-sm-primary{background:var(--blue);color:#fff;border:none;padding:6px 14px;border-radius:5px;
+  font-size:12px;cursor:pointer;}
+.btn-sm{background:#eee;color:var(--text);border:none;padding:6px 14px;border-radius:5px;
+  font-size:12px;cursor:pointer;margin-left:6px;}
+
+/* ── RPA STYLES ── */
+.rpa-header{background:linear-gradient(135deg,var(--blue),#1a4aa8);color:#fff;
+  border-radius:10px;padding:22px 28px;margin-bottom:20px;}
+.rpa-header h2{font-size:18px;font-weight:800;margin-bottom:6px;}
+.rpa-header p{font-size:12px;opacity:.8;}
+.rs{background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden;}
+.rst{background:var(--blue);color:#fff;padding:9px 16px;font-size:12px;font-weight:700;letter-spacing:.5px;}
+.rrow{display:flex;border-bottom:1px solid #f0f0f0;}
+.rrow:last-child{border-bottom:none;}
+.rk{flex:0 0 200px;background:#f8f9fb;padding:8px 14px;font-size:12px;font-weight:600;color:var(--muted);}
+.rv{flex:1;padding:8px 14px;font-size:13px;}
+.rv.miss{color:var(--red);font-style:italic;}
+.rtxt{font-size:13px;line-height:1.7;white-space:pre-wrap;padding:12px 14px;background:#fafbff;}
+.rlist{padding-left:18px;margin:8px 0;}
+.rlist li{font-size:13px;margin-bottom:5px;line-height:1.6;}
+
+/* ── AMOSTRAL TABLE ── */
+.tbl-amostral{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+.tbl-amostral th{background:var(--blue);color:#fff;padding:8px 12px;text-align:center;}
+.tbl-amostral td{padding:7px 12px;border:1px solid var(--border);text-align:center;}
+.tbl-amostral tr:nth-child(even) td{background:#f8f9fb;}
+.row-hl{background:#fffde7 !important;border-left:4px solid var(--yellow);font-weight:bold;}
+.alert-info{background:#e8f4fd;border:1px solid #b8daff;border-radius:6px;padding:10px 14px;
+  font-size:12px;margin-bottom:10px;color:#004085;}
+
+/* ── DECLARATION BOX ── */
+.decl-box{background:#f8f9fb;border:2px solid var(--border);border-radius:10px;
+  padding:22px 26px;margin-top:24px;}
+.decl-box h3{color:var(--blue);font-size:15px;margin-bottom:10px;}
+.decl-box input[type=text]{width:100%;max-width:420px;padding:10px 14px;border:1.5px solid var(--border);
+  border-radius:7px;font-size:14px;margin-bottom:12px;display:block;}
+.decl-confirmed{background:#e6f9f0;border:1.5px solid #b2f2bb;border-radius:8px;padding:14px 18px;
+  color:var(--ok);font-size:13px;font-weight:600;}
+
+/* ── FT TOPBAR + TABS ── */
+#ft-topbar{background:var(--card);border-bottom:2px solid var(--border);padding:16px 24px 0;
+  position:sticky;top:58px;z-index:80;}
+#ft-topbar h2{font-size:16px;font-weight:700;color:var(--blue);margin-bottom:10px;}
+#ft-tabs{display:flex;gap:4px;flex-wrap:wrap;}
+.fttab{background:none;border:none;border-bottom:3px solid transparent;padding:8px 14px;
+  font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;border-radius:6px 6px 0 0;}
+.fttab:hover{background:#f0f4ff;color:var(--blue);}
+.fttab.active{border-bottom-color:var(--blue);color:var(--blue);background:#f0f4ff;}
+.fttab.badge::after{content:'!';background:var(--red);color:#fff;font-size:9px;padding:1px 4px;
+  border-radius:8px;margin-left:5px;vertical-align:top;}
+
+/* ── FT SUBPANELS ── */
+.ftpnl{display:none;padding:24px 28px;}
+.ftpnl.show{display:block;}
+
+/* ── FT FOOTER ── */
+#ft-footer{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--border);
+  padding:12px 28px;display:flex;align-items:center;gap:10px;z-index:75;}
+.save-msg{font-size:12px;color:var(--ok);font-weight:600;margin-right:auto;}
+
+/* ── FIELD SECTIONS ── */
+.ft-sec{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  margin-bottom:16px;overflow:hidden;}
+.ft-sec-title{background:#f0f4ff;border-bottom:1px solid var(--border);padding:9px 16px;
+  font-size:12px;font-weight:700;color:var(--blue);}
+.ft-sec-body{padding:16px;}
+.field-ro{font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;}
+.field-ro:last-child{border-bottom:none;}
+.field-ro label{font-size:11px;font-weight:700;color:var(--muted);flex:0 0 180px;}
+.field-ro span{color:var(--text);}
+.field-editavel{margin-top:16px;}
+.fe-label{font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px;}
+.field-value{font-size:13px;line-height:1.7;white-space:pre-wrap;background:#fafbff;
+  border:1px solid var(--border);border-radius:6px;padding:10px 14px;}
+.muted{color:var(--muted);font-size:11px;}
+.muted-sm{font-size:11px;color:var(--muted);margin-left:10px;}
+
+/* ── ATRIBUTOS ── */
+.atrib-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.atrib-card{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  margin-bottom:14px;overflow:hidden;}
+.atrib-hdr{display:flex;justify-content:space-between;align-items:center;
+  background:#f0f4ff;padding:10px 14px;border-bottom:1px solid var(--border);}
+.atrib-n{font-size:12px;font-weight:700;color:var(--blue);}
+.atrib-dsp{padding:12px 14px;}
+.atrib-q{font-weight:700;font-size:13px;color:var(--text);margin-bottom:6px;}
+.atrib-cv{font-size:11px;color:var(--muted);background:#f8f9fb;padding:5px 9px;border-radius:4px;
+  border-left:3px solid var(--border);}
+.atrib-edt{padding:12px 14px;background:#fffef0;border-top:1px solid var(--border);}
+.atrib-edt label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px;margin-top:8px;}
+.atrib-edt textarea{width:100%;border:1.5px solid var(--border);border-radius:5px;
+  padding:7px 10px;font-size:13px;resize:vertical;font-family:inherit;}
+.atrib-fields{padding:12px 14px;border-top:1px solid #f0f0f0;}
+.atrib-fields label{font-size:11px;font-weight:700;color:var(--muted);display:block;
+  margin-bottom:4px;margin-top:10px;}
+.atrib-fields label:first-child{margin-top:0;}
+.atrib-fields textarea,.atrib-fields input[type=text]{width:100%;border:1.5px solid var(--border);
+  border-radius:5px;padding:7px 10px;font-size:13px;font-family:inherit;}
+.radio-row{display:flex;gap:18px;margin-bottom:4px;}
+.radio-row label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;cursor:pointer;}
+
+/* ── AMOSTRAS TABLE ── */
+.amostras-ctrl{display:flex;align-items:center;gap:12px;margin:14px 0;}
+.tbl-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:8px;}
+#tbl-amostras{width:100%;border-collapse:collapse;font-size:12px;}
+#tbl-amostras th{background:var(--blue);color:#fff;padding:8px 10px;white-space:nowrap;}
+#tbl-amostras td{padding:7px 9px;border:1px solid var(--border);vertical-align:middle;}
+#tbl-amostras tbody tr:nth-child(even) td{background:#f8f9fb;}
+#tbl-amostras input[type=text]{width:100%;border:1px solid var(--border);border-radius:4px;
+  padding:4px 7px;font-size:11px;}
+#tbl-amostras textarea{width:100%;border:1px solid var(--border);border-radius:4px;
+  padding:4px 7px;font-size:11px;resize:vertical;min-width:120px;}
+
+/* ── CONCLUSÃO ── */
+.conclusao-wrap{max-width:640px;}
+.radio-lg{display:flex;flex-direction:column;gap:12px;margin:14px 0;}
+.radio-lg label{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;
+  cursor:pointer;padding:12px 16px;border:2px solid var(--border);border-radius:8px;transition:all .15s;}
+.radio-eficaz:has(input:checked){background:#e6f9f0;border-color:var(--ok);color:var(--ok);}
+.radio-ineficaz:has(input:checked){background:#ffeaea;border-color:var(--red);color:var(--red);}
+.radio-lg textarea{width:100%;margin-top:10px;border:1.5px solid var(--border);border-radius:7px;
+  padding:10px 14px;font-size:13px;min-height:80px;font-family:inherit;}
+.alert-warning{background:#fff8e1;border:1.5px solid var(--yellow);border-radius:7px;
+  padding:12px 16px;font-size:13px;color:#7a5c00;margin-top:12px;}
+
+/* ── CONSTATAÇÕES / OM ── */
+.tab-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.tab-hdr h3{font-size:15px;font-weight:700;color:var(--blue);}
+.const-card,.om-card{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  margin-bottom:14px;overflow:hidden;}
+.const-hdr,.om-hdr{display:flex;justify-content:space-between;align-items:center;
+  background:#fff5f5;padding:10px 14px;border-bottom:1px solid var(--border);}
+.const-hdr strong,.om-hdr strong{color:var(--red);}
+.const-body,.om-body{padding:14px;}
+.const-body label,.om-body label{font-size:11px;font-weight:700;color:var(--muted);
+  display:block;margin-bottom:4px;margin-top:10px;}
+.const-body label:first-child,.om-body label:first-child{margin-top:0;}
+.const-body input,.const-body select,.const-body textarea,
+.om-body input,.om-body textarea{width:100%;border:1.5px solid var(--border);border-radius:5px;
+  padding:7px 10px;font-size:13px;font-family:inherit;}
+.const-body textarea,.om-body textarea{resize:vertical;}
+
+/* ── REVISOR / METAS ── */
+.rev-sec{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  margin-bottom:12px;overflow:hidden;}
+.rev-st{background:var(--blue);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;}
+.mode-btn{padding:7px 16px;border:1.5px solid var(--border);background:#fff;color:var(--muted);
+  font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .15s;}
+.mode-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* ── M3 ── */
+.m3-tab{padding:8px 16px;border:none;background:none;font-size:13px;font-weight:600;
+  cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;}
+.m3-tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+.m3-pane{display:none;padding-top:16px;}
+.m3-pane.active{display:block;}
+.dim-row{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid #f0f0f0;}
+.dim-label{font-size:13px;font-weight:700;color:var(--text);}
+.dim-sub{font-size:11px;color:var(--muted);}
+.star-row{display:flex;gap:4px;}
+.star-btn{background:none;border:none;font-size:22px;color:#dee2e6;cursor:pointer;
+  transition:color .1s;line-height:1;}
+.star-btn.on{color:var(--yellow);}
+.nota-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;}
+.nb1{background:#ffeaea;color:#c92a2a;}.nb2{background:#fff5e1;color:#e67700;}
+.nb3{background:#e7f5ff;color:#1971c2;}.nb4{background:#e6f9f0;color:#2b8a3e;}
+.nb5{background:#d3f9d8;color:#2b8a3e;}
+.media-bar{height:6px;background:#e9ecef;border-radius:3px;overflow:hidden;}
+.media-fill{height:100%;border-radius:3px;transition:width .4s;}
+.painel-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.painel-tbl th{background:var(--blue);color:#fff;padding:7px 10px;text-align:left;}
+.painel-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);}
+.painel-tbl tr:hover td{background:#f5f7ff;}
+
+/* ── VALIDATION ── */
+#fval{margin-top:14px;}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:8px;}
+.fc{padding:8px 12px;border-radius:6px;font-size:11px;display:flex;flex-direction:column;gap:2px;}
+.fc.ok{background:#e6f9f0;border:1px solid #b2f2bb;}
+.fc.em{background:#ffeaea;border:1px solid #ffc9c9;}
+.fl{font-weight:700;}
+.fv{color:var(--muted);}
+
+/* ── ALERTS ── */
+.al{display:flex;gap:10px;padding:10px 14px;border-radius:7px;font-size:13px;margin-bottom:10px;}
+.al.ao{background:#e6f9f0;border:1px solid #b2f2bb;color:var(--ok);}
+.al.aw{background:#fff8e1;border:1px solid var(--yellow);color:#7a5c00;}
+.al.ar{background:#ffeaea;border:1px solid #ffc9c9;color:var(--red);}
+.ai2{font-size:18px;flex-shrink:0;}
+.ft-banner{background:#e7f5ff;border:1.5px solid #a5d8ff;border-radius:8px;
+  padding:12px 16px;font-size:13px;color:#1971c2;margin-bottom:16px;display:flex;
+  align-items:center;gap:10px;flex-wrap:wrap;}
+
+/* ── PRINT ── */
+@media print{
+  #app-sidebar,#app-header,#ft-topbar,#ft-footer{display:none !important;}
+  #app-main{margin-left:0 !important;padding:10px !important;}
+  #pnl-controle,#pnl-revisor,#pnl-metas{display:none !important;}
+  #pnl-rpa,#pnl-ft{display:block !important;}
+  .ftpnl{display:block !important;}
+  .decl-box,#rpa-decl{display:none !important;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header id="app-header">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 90" width="40" height="45">
+    <rect x="8" y="2" width="64" height="18" rx="2" fill="#F5A800"/>
+    <rect x="8" y="22" width="64" height="44" rx="2" fill="#009B3A"/>
+    <text x="40" y="53" font-family="Arial Black,Arial" font-weight="900" font-size="26" fill="white" text-anchor="middle" font-style="italic">BR</text>
+    <text x="40" y="82" font-family="Arial,sans-serif" font-weight="700" font-size="10.5" fill="#003087" text-anchor="middle" letter-spacing="1.5">PETROBRAS</text>
+  </svg>
+  <h1>THEMISIA SOX <span>Controles de Negócios · Auditoria Interna</span></h1>
+</header>
+
+<!-- ══ SIDEBAR ══ -->
+<nav id="app-sidebar">
+  <div class="nav-section">Navegação</div>
+  <div class="nav-item active" id="nav-controle" onclick="navTo('controle')">🔍 Selecionar Controle</div>
+  <div class="nav-item nav-disabled" id="nav-rpa" onclick="navTo('rpa')">📄 RPA</div>
+  <div class="nav-item nav-disabled" id="nav-ft" onclick="navTo('ft')">📋 Folha de Teste</div>
+  <div class="nav-sub" id="nsub-dados" onclick="navToFtSub('dados')">▸ Dados</div>
+  <div class="nav-sub" id="nsub-amostras" onclick="navToFtSub('amostras')">▸ Amostras</div>
+  <div class="nav-sub" id="nsub-atributos" onclick="navToFtSub('atributos')">▸ Atributos</div>
+  <div class="nav-sub" id="nsub-constatacoes" onclick="navToFtSub('constatacoes')">▸ Constatações</div>
+  <div class="nav-sub" id="nsub-om" onclick="navToFtSub('om')">▸ Oport. Melhoria</div>
+  <div class="nav-footer">
+    <div class="ver">THEMISIA v2.0 <button id="lock-btn" onclick="abrirMetas()" title="Painel oculto">🔒</button></div>
+    <div class="sub">Controles de Negócios · SOX</div>
+  </div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main id="app-main">
+
+<!-- ── PANEL: CONTROLE ── -->
+<div id="pnl-controle" class="pnl show">
+  <div class="page-title">🔍 Selecionar Controle SOX — Área de Negócios</div>
+  <div class="card">
+    <div class="card-title">1. Carregar Base CPT</div>
+    <span id="file-status">⏳ Aguardando carregamento automático...</span>
+    <div id="file-input-row" style="display:none">
+      <input type="file" id="file-input" accept=".xlsx,.xls" onchange="loadCPT()">
+      <label style="font-size:12px;color:var(--muted);">Selecione o arquivo CPT.xlsx</label>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">2. Buscar Controle</div>
+    <div class="search-wrap" id="cs-wrap">
+      <input type="text" id="ctrl-search" placeholder="Digite ID ou nome do controle..."
+        oninput="doSearch(this.value)" autocomplete="off">
+      <div id="sr"></div>
+    </div>
+  </div>
+  <div id="ctrl-card" class="card">
+    <div class="card-title">3. Controle Selecionado</div>
+    <div id="ctrl-info"></div>
+    <div id="fval" style="display:none">
+      <div id="malert"></div>
+      <div class="fgrid" id="fgrid"></div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-primary btn-lg" id="btn-rpa" onclick="gerarRPA()" disabled>📄 Gerar RPA →</button>
+      <button class="btn-sec" onclick="limparCtrl()">🗑️ Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL: RPA ── -->
+<div id="pnl-rpa" class="pnl">
+  <div id="rpa-content"></div>
+  <div class="decl-box" id="rpa-decl">
+    <h3>📋 Declaração de Leitura do RPA</h3>
+    <p style="margin-bottom:14px;font-size:13px;color:var(--muted);">Ao confirmar, o auditor declara ter lido e compreendido este RPA, em conformidade com o Guia Prático SOX Petrobras 2025.</p>
+    <div id="rpa-decl-form">
+      <input type="text" id="rpa-auditor-nome" placeholder="Seu nome completo">
+      <button onclick="rpaDeclarar()" class="btn-primary btn-lg">✅ Confirmo que li o RPA — Avançar para Folha de Teste</button>
+    </div>
+    <div id="rpa-decl-info" style="display:none" class="decl-confirmed"></div>
+  </div>
+</div>
+
+<!-- ── PANEL: FOLHA DE TESTE ── -->
+<div id="pnl-ft" class="pnl" style="padding:0;margin:-28px -32px;">
+  <div id="ft-topbar">
+    <h2>📋 Folha de Teste — <span id="ft-ctrl-nome"></span></h2>
+    <div id="ft-tabs">
+      <button class="fttab active" id="fttab-dados" onclick="ftNavTo('dados')">📊 Dados</button>
+      <button class="fttab" id="fttab-amostras" onclick="ftNavTo('amostras')">🔢 Amostras</button>
+      <button class="fttab" id="fttab-atributos" onclick="ftNavTo('atributos')">📝 Atributos</button>
+      <button class="fttab" id="fttab-constatacoes" onclick="ftNavTo('constatacoes')">⚠️ Constatações</button>
+      <button class="fttab" id="fttab-om" onclick="ftNavTo('om')">💡 Oport. Melhoria</button>
+    </div>
+  </div>
+
+  <div id="ftpnl-dados" class="ftpnl show"></div>
+  <div id="ftpnl-atributos" class="ftpnl"></div>
+  <div id="ftpnl-amostras" class="ftpnl"></div>
+  <div id="ftpnl-conclusao" class="ftpnl"></div>
+  <div id="ftpnl-constatacoes" class="ftpnl"></div>
+  <div id="ftpnl-om" class="ftpnl"></div>
+
+  <div id="ft-footer">
+    <span id="ft-save-msg" class="save-msg"></span>
+    <button onclick="salvarFT()" class="btn-primary">💾 Salvar</button>
+    <button onclick="exportarHTML()" class="btn-sec">🌐 HTML</button>
+    <button onclick="exportarExcel()" class="btn-sec">📊 Excel</button>
+    <button onclick="exportarPDF()" class="btn-sec">📄 PDF</button>
+  </div>
+</div>
+
+<!-- ── PANEL: REVISOR (hidden) ── -->
+<div id="pnl-revisor" class="pnl">
+  <div class="page-title">🔎 Revisor AI SOX</div>
+  <div class="card">
+    <div class="card-title">Modo de Revisão</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="mode-btn active" id="mode-padrao" onclick="setMode('padrao')">Padrão</button>
+      <button class="mode-btn" id="mode-critico" onclick="setMode('critico')">Crítico (ADC)</button>
+    </div>
+    <div id="mode-desc" style="font-size:12px;color:var(--muted);"><strong>Padrão:</strong> Revisão equilibrada com foco em completude e consistência.</div>
+  </div>
+  <div class="card" id="rev-prereq"><p style="color:var(--muted);">Selecione um controle e gere a Folha de Teste antes de revisar.</p></div>
+  <div class="card" id="rev-ctx-sec" style="display:none;">
+    <div class="card-title">Contexto do Controle</div>
+    <div id="rev-ctx-box" style="font-size:13px;"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Opção A — Revisar Folha de Teste Aberta</div>
+    <button class="btn-primary" onclick="buildReviewFromDOM()">🔍 Analisar Folha de Teste</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Opção B — Colar Texto</div>
+    <textarea id="rev-pdf-text" rows="6" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px;font-size:12px;margin-bottom:10px;" placeholder="Cole aqui o texto da folha de teste..."></textarea>
+    <button class="btn-primary" onclick="buildReviewFromText()">🔍 Analisar Texto</button>
+  </div>
+  <div id="rev-resultado" style="display:none;margin-top:16px;"></div>
+</div>
+
+<!-- ── PANEL: METAS (hidden) ── -->
+<div id="pnl-metas" class="pnl">
+  <div class="page-title">📊 Painel de Avaliação de Metas</div>
+  <!-- Summary cards rendered here by m3RenderSummaryCards() -->
+  <div id="m3-summary-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
+
+  <div style="display:flex;gap:8px;border-bottom:2px solid var(--border);margin-bottom:16px;">
+    <button class="m3-tab active" id="m3tab-form" onclick="m3Aba('m3-pane-form',this)">➕ Nova Avaliação</button>
+    <button class="m3-tab" id="m3tab-auditor" onclick="m3Aba('m3-pane-auditor',this)">👤 Por Auditor</button>
+    <button class="m3-tab" id="m3tab-ciclo" onclick="m3Aba('m3-pane-ciclo',this)">📅 Por Ciclo</button>
+    <button class="m3-tab" id="m3tab-revisor" onclick="m3Aba('m3-pane-revisor',this)">🔍 Revisor AI</button>
+  </div>
+  <div id="m3-pane-form" class="m3-pane active">
+    <div class="card">
+      <div class="card-title">Dados da Avaliação</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Auditor</label>
+          <input type="text" id="m3-inp-auditor" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;" placeholder="Nome do auditor"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Ciclo</label>
+          <input type="text" id="m3-inp-ciclo" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;" placeholder="Ex: 2026-T2"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Controle</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="m3-inp-controle" style="flex:1;border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;" placeholder="ID e nome do controle">
+            <button class="btn-sec" onclick="m3UsarCtrlAtual()" title="Usar controle atual">↙</button>
+          </div></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">Revisor</label>
+          <input type="text" id="m3-inp-revisor" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;" placeholder="Nome do revisor"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Notas por Dimensão</div>
+      <div id="m3-dims"></div>
+      <div id="m3-alert-obrig" style="display:none;" class="al aw" style="margin-top:10px;">
+        <span class="ai2">⚠️</span><div>Nota abaixo de 3 requer justificativa no campo Observações.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Observações</div>
+      <textarea id="m3-inp-obs" rows="3" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px;font-size:13px;" placeholder="Comentários sobre o trabalho do auditor..."></textarea>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+        <button class="btn-primary" onclick="m3Salvar()">💾 Salvar Avaliação</button>
+        <button class="btn-sec" onclick="m3Limpar()">🗑️ Limpar</button>
+        <div id="m3-save-msg" style="display:none;font-size:12px;color:var(--ok);font-weight:600;"></div>
+      </div>
+    </div>
+  </div>
+  <div id="m3-pane-auditor" class="m3-pane">
+    <div class="card">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <select id="m3-sel-auditor" onchange="m3RenderPainelAuditor()" style="border:1.5px solid var(--border);border-radius:6px;padding:7px 12px;font-size:13px;">
+          <option value="">👥 Todos os auditores</option></select>
+        <button class="btn-sec" onclick="m3ExportarAuditor()">📥 Exportar CSV</button>
+      </div>
+      <div id="m3-painel-auditor"></div>
+    </div>
+  </div>
+  <div id="m3-pane-ciclo" class="m3-pane">
+    <div class="card">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <select id="m3-sel-ciclo" onchange="m3RenderCiclo()" style="border:1.5px solid var(--border);border-radius:6px;padding:7px 12px;font-size:13px;">
+          <option value="">Todos os ciclos</option></select>
+        <button class="btn-sec" onclick="m3ExportarCiclo()">📥 Exportar CSV</button>
+        <button class="btn-sec" style="color:var(--red);border-color:var(--red);" onclick="m3LimparTudo()">🗑️ Limpar Tudo</button>
+      </div>
+      <div id="m3-painel-ciclo"></div>
+    </div>
+  </div>
+  <div id="m3-pane-revisor" class="m3-pane">
+    <div class="card">
+      <div class="card-title">Modo de Revisão</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="mode-btn active" id="mode-padrao2" onclick="setMode('padrao')">Padrão</button>
+        <button class="mode-btn" id="mode-critico2" onclick="setMode('critico')">Crítico (ADC)</button>
+      </div>
+      <div id="mode-desc2" style="font-size:12px;color:var(--muted);"><strong>Padrão:</strong> Revisão equilibrada com foco em completude e consistência.</div>
+    </div>
+    <div class="card" id="rev-prereq2"><p style="color:var(--muted);">Selecione um controle e gere a Folha de Teste antes de revisar.</p></div>
+    <div class="card">
+      <div class="card-title">Opção A — Revisar Folha de Teste Aberta</div>
+      <button class="btn-primary" onclick="buildReviewFromDOM()">🔍 Analisar Folha de Teste</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Opção B — Colar Texto</div>
+      <textarea id="rev-pdf-text2" rows="6" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px;font-size:12px;margin-bottom:10px;" placeholder="Cole aqui o texto da folha de teste..."></textarea>
+      <button class="btn-primary" onclick="buildReviewFromText2()">🔍 Analisar Texto</button>
+    </div>
+    <div id="rev-resultado2" style="display:none;margin-top:16px;"></div>
+  </div>
+</div>
+
+</main>
+<script>
+// ── COLUMN MAP ────────────────────────────────────────────────────────────────
+var C={
+  ORG:1,MACROPROCESSO:6,PROCESSO:8,SUBPROCESSO:11,RISCO_SUBPROC:13,
+  ID_CTRL:19,CTRL:20,ABORDAGEM:21,
+  CAT_CTRL:25,NIVEL_PROVA:26,IMPORTANCIA:27,RISCO_CTRL:28,RELEVANCIA:29,
+  CTRL_ASSOC:30,EVIDENCIA_SUG:31,NATUREZA:32,DATA_EVENTO:33,FREQUENCIA:34,
+  FINALIDADE:36,AUTOMACAO:37,A_TESTAR:38,PROC_TESTE:39,
+  GRUPO:40,SUBGRUPO:41,OBJETIVO:42,CTG_OBJ:43,DESC_OBJ:44,
+  CAT_RISCO:45,RISCO:46,DESC_RISCO:47,CAUSA:48,
+  STATUS_DESIGN:56,CLASSIF_DESIGN:60,
+  SITUACAO_ATUAL:61,DESC_EXTR:62,FINALIDADE2:63,AUTOMACAO2:64,
+  FREQUENCIA2:65,INICIO_OP:67,RESP_NOME:69,
+  PERIODO:74,ANO:75,
+  PONTO_CRIT:82,DESC_PC:89,RECOMEND:90,
+  EMPRESA:106,DIRETORIA:107,GER_EXEC:108,
+  CONTAS:117
+};
+
+var todos=[], ctrl=null, controlId='';
+var ftAtributos=[], ftConstatacoes=[], ftOMs=[];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function g(col){if(!ctrl)return'';var v=ctrl[col];return(v!==null&&v!==undefined&&String(v).trim()!=='')?String(v).trim():'';}
+function go(col,fb){return g(col)||(fb||'');}
+function miss(col){return!g(col);}
+function eh(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function ec(col){return eh(go(col,'—'));}
+function hoje(){return new Date().toLocaleDateString('pt-BR');}
+function row(k,v,m){return '<div class="rrow"><div class="rk">'+k+'</div><div class="rv '+(m?'miss':'')+'">'+( v||'—')+'</div></div>';}
+function lista(arr){return arr.length?'<ul class="rlist">'+arr.map(function(x){return '<li>'+eh(x)+'</li>';}).join('')+'</ul>':'<em style="color:#aaa;font-size:12px;">Não informado</em>';}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function navTo(pnl){
+  var navEl=document.getElementById('nav-'+pnl);
+  if(navEl&&navEl.classList.contains('nav-disabled')){
+    alert('Complete o passo anterior primeiro.');return;
+  }
+  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('show');});
+  var el=document.getElementById('pnl-'+pnl);
+  if(el) el.classList.add('show');
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  if(navEl) navEl.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function navToFtSub(sub){
+  var navFT=document.getElementById('nav-ft');
+  if(navFT&&navFT.classList.contains('nav-disabled')){alert('Complete o RPA primeiro.');return;}
+  navTo('ft');
+  ftNavTo(sub);
+}
+
+function ftNavTo(sub){
+  document.querySelectorAll('.ftpnl').forEach(function(p){p.classList.remove('show');});
+  var el=document.getElementById('ftpnl-'+sub);
+  if(el) el.classList.add('show');
+  document.querySelectorAll('.fttab').forEach(function(t){t.classList.remove('active');});
+  var tb=document.getElementById('fttab-'+sub);
+  if(tb) tb.classList.add('active');
+  document.querySelectorAll('.nav-sub').forEach(function(s){s.classList.remove('active');});
+  var ns=document.getElementById('nsub-'+sub);
+  if(ns) ns.classList.add('active');
+}
+
+function abrirMetas(){
+  var pin=prompt('PIN de acesso (Revisores / Coordenadores):');
+  if(pin==='2025'){
+    navTo('metas');
+  } else if(pin!==null) alert('PIN incorreto.');
+}
+
+// ── AUTO-LOAD CPT ─────────────────────────────────────────────────────────────
+function autoLoadCPT(){
+  var st=document.getElementById('file-status');
+  st.textContent='⏳ Carregando CPT automaticamente...';
+  fetch('CPT.xlsx')
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return res.arrayBuffer();
+    })
+    .then(function(buf){
+      try{
+        var wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        var rows=data.slice(1).filter(function(r){return r[C.ID_CTRL];});
+        var map=new Map();
+        rows.forEach(function(r){map.set(String(r[C.ID_CTRL]),r);});
+        todos=Array.from(map.values());
+        st.textContent='✅ '+todos.length+' controles carregados automaticamente';
+        st.style.color='var(--green)';
+        document.getElementById('file-input-row').style.display='none';
+        document.getElementById('ctrl-search').placeholder='Ex: 50418865 ou CCC08...';
+        document.getElementById('ctrl-search').focus();
+      }catch(err){
+        st.textContent='⚠ Erro ao processar: '+err.message;
+        document.getElementById('file-input-row').style.display='flex';
+      }
+    })
+    .catch(function(){
+      st.textContent='⚠ CPT não encontrado — carregue manualmente.';
+      document.getElementById('file-input-row').style.display='flex';
+    });
+}
+
+function loadCPT(){
+  var inp=document.getElementById('file-input');
+  var st=document.getElementById('file-status');
+  if(!inp.files||!inp.files[0]){return;}
+  var file=inp.files[0];
+  st.textContent='⏳ Carregando '+file.name+'...';
+  var reader=new FileReader();
+  reader.onerror=function(){st.textContent='❌ Erro ao ler arquivo.';};
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var rows=data.slice(1).filter(function(r){return r[C.ID_CTRL];});
+      var map=new Map();
+      rows.forEach(function(r){map.set(String(r[C.ID_CTRL]),r);});
+      todos=Array.from(map.values());
+      st.textContent='✅ '+todos.length+' controles — "'+file.name+'"';
+      st.style.color='var(--green)';
+      document.getElementById('ctrl-search').placeholder='Ex: 50418865 ou CCC08...';
+    }catch(err){
+      st.textContent='❌ Erro: '+err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+function doSearch(q){
+  var box=document.getElementById('sr');
+  if(!q||q.length<2){box.style.display='none';return;}
+  if(!todos.length){
+    box.innerHTML='<div class="si" style="color:var(--red)">⚠ Carregue o CPT primeiro</div>';
+    box.style.display='block';return;
+  }
+  var t=q.toLowerCase();
+  var res=todos.filter(function(r){
+    return String(r[C.ID_CTRL]).includes(t)||String(r[C.CTRL]||'').toLowerCase().includes(t);
+  }).slice(0,40);
+  if(!res.length){
+    box.innerHTML='<div class="si">Nenhum resultado para "'+eh(q)+'"</div>';
+    box.style.display='block';return;
+  }
+  box.innerHTML=res.map(function(r){
+    return '<div class="si" onclick="selCtrl(\''+r[C.ID_CTRL]+'\')">'+
+      '<span class="sid">'+eh(String(r[C.ID_CTRL]))+'</span>'+
+      '<div class="sn2">'+eh(String(r[C.CTRL]||''))+'</div>'+
+      '<div class="ss">'+eh(String(r[C.MACROPROCESSO]||''))+' › '+eh(String(r[C.PROCESSO]||''))+'</div>'+
+    '</div>';
+  }).join('');
+  box.style.display='block';
+}
+
+function selCtrl(id){
+  ctrl=todos.find(function(r){return String(r[C.ID_CTRL])===String(id);});
+  if(!ctrl) return;
+  controlId=String(ctrl[C.ID_CTRL]);
+  document.getElementById('sr').style.display='none';
+  document.getElementById('ctrl-search').value='';
+  renderCtrlInfo();
+  validarCampos();
+  document.getElementById('btn-rpa').disabled=false;
+  document.getElementById('ctrl-card').style.display='block';
+  updateRevCtx();
+}
+
+function limparCtrl(){
+  ctrl=null; controlId='';
+  document.getElementById('ctrl-card').style.display='none';
+  document.getElementById('btn-rpa').disabled=true;
+  document.getElementById('nav-rpa').classList.add('nav-disabled');
+  document.getElementById('nav-ft').classList.add('nav-disabled');
+}
+
+function renderCtrlInfo(){
+  var risco=g(C.RISCO_CTRL);
+  var rcl={'Alto':'bdg-r','Médio':'bdg-y','Baixo':'bdg-g'}[risco]||'bdg';
+  var imp=g(C.IMPORTANCIA);
+  var icl=imp.includes('Não-Chave')?'bdg':'bdg-r';
+  document.getElementById('ctrl-info').innerHTML=
+    '<div class="ctrl-id">'+ec(C.ID_CTRL)+'</div>'+
+    '<div class="ctrl-nome">'+ec(C.CTRL)+'</div>'+
+    '<div class="ctrl-meta">'+
+      '<strong>Empresa:</strong> '+ec(C.EMPRESA)+'&nbsp;&nbsp;'+
+      '<strong>Diretoria:</strong> '+ec(C.DIRETORIA)+'<br>'+
+      '<strong>Frequência:</strong> '+go(C.FREQUENCIA,go(C.FREQUENCIA2,'—'))+'&nbsp;&nbsp;'+
+      '<strong>Importância:</strong> <span class="bdg '+icl+'">'+go(C.IMPORTANCIA,'—')+'</span>&nbsp;&nbsp;'+
+      '<strong>Risco:</strong> <span class="bdg '+rcl+'">'+go(C.RISCO_CTRL,'—')+'</span>&nbsp;&nbsp;'+
+      '<strong>Nível de Prova:</strong> '+go(C.NIVEL_PROVA,'—')+'<br>'+
+      '<strong>Responsável:</strong> '+go(C.RESP_NOME,'—')+
+    '</div>';
+}
+
+var CF=[
+  {l:'Objetivo',c:C.OBJETIVO},{l:'Contas/Assertivas',c:C.CONTAS},
+  {l:'Risco(s)',c:C.RISCO},{l:'Evidência Sugerida',c:C.EVIDENCIA_SUG},
+  {l:'Proc. de Teste',c:C.PROC_TESTE},{l:'Situação Atual',c:C.SITUACAO_ATUAL},
+  {l:'Frequência',c:C.FREQUENCIA},{l:'Natureza',c:C.NATUREZA},
+];
+
+function validarCampos(){
+  var missing=[];
+  document.getElementById('fgrid').innerHTML=CF.map(function(fi){
+    var v=g(fi.c),emp=!v;
+    if(emp) missing.push(fi.l);
+    return '<div class="fc '+(emp?'em':'ok')+'">'+
+      '<span class="fl">'+(emp?'❌':'✅')+' '+fi.l+'</span>'+
+      '<span class="fv">'+(emp?'NÃO PREENCHIDO':v.substring(0,40))+'</span></div>';
+  }).join('');
+  document.getElementById('fval').style.display='block';
+  document.getElementById('malert').innerHTML=missing.length
+    ?'<div class="al aw"><span class="ai2">⚠️</span><div><strong>'+missing.length+' campo(s) vazio(s):</strong> '+missing.join(', ')+'</div></div>'
+    :'<div class="al ao"><span class="ai2">✅</span><div><strong>Todos os campos críticos preenchidos.</strong></div></div>';
+}
+
+// ── AMOSTRAL TABLE ────────────────────────────────────────────────────────────
+function getAmostra(freq){
+  var f=(freq||'').toLowerCase();
+  if(f.includes('várias')||f.includes('multiplas')||f.includes('múltiplas'))return{n:45,j:'Múltiplas vezes ao dia → 45 amostras'};
+  if(f.includes('diário')||f.includes('diario'))return{n:25,j:'Diário → 25 amostras'};
+  if(f.includes('semanal'))return{n:5,j:'Semanal → 5 amostras'};
+  if(f.includes('quinzenal'))return{n:3,j:'Quinzenal → 3 amostras'};
+  if(f.includes('mensal'))return{n:2,j:'Mensal → 2 amostras'};
+  if(f.includes('trimestral'))return{n:2,j:'Trimestral → 2 amostras'};
+  if(f.includes('semestral'))return{n:2,j:'Semestral → 2 amostras'};
+  if(f.includes('anual'))return{n:1,j:'Anual → 1 amostra'};
+  return{n:2,j:'Frequência não definida → 2 amostras'};
+}
+
+function getTecnica(proc){
+  var p=(proc||'').toLowerCase();
+  if(p.includes('reexec')||p.includes('reperform'))return'Reexecução';
+  if(p.includes('observ'))return'Observação';
+  if(p.includes('indagaç')||p.includes('entrev'))return'Indagação';
+  return'Exame Documental';
+}
+
+var AMOSTRAL_DATA=[
+  {freq:'Múltiplas vezes ao dia',a:60,b:45,c:25,key:'multiplas'},
+  {freq:'Diário',a:45,b:25,c:15,key:'diario'},
+  {freq:'Semanal',a:15,b:10,c:5,key:'semanal'},
+  {freq:'Quinzenal',a:5,b:4,c:3,key:'quinzenal'},
+  {freq:'Mensal',a:3,b:3,c:2,key:'mensal'},
+  {freq:'Trimestral',a:2,b:2,c:2,key:'trimestral'},
+  {freq:'Semestral',a:2,b:2,c:1,key:'semestral'},
+  {freq:'Anual',a:2,b:1,c:1,key:'anual'}
+];
+
+function amostraTable(){
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var fl=(freq||'').toLowerCase();
+  function match(key){
+    if(key==='multiplas')return fl.includes('várias')||fl.includes('múltiplas')||fl.includes('multiplas');
+    return fl.includes(key);
+  }
+  var rows=AMOSTRAL_DATA.map(function(d){
+    var hl=match(d.key)?'class="row-hl"':'';
+    return '<tr '+hl+'><td>'+d.freq+'</td><td>'+d.a+'</td><td>'+d.b+'</td><td>'+d.c+'</td></tr>';
+  }).join('');
+  return '<div class="alert-info">⚠️ A classificação do risco (A, B ou C) deve ser confirmada com a CONF/CI.</div>'+
+    '<p style="font-size:13px;margin-bottom:8px;">Frequência (CPT): <strong>'+eh(freq||'—')+'</strong></p>'+
+    '<table class="tbl-amostral"><thead><tr><th>Frequência</th><th>🔴 Risco A</th><th>🟡 Risco B</th><th>🟢 Risco C</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>';
+}
+
+// ── BUILD ATRIBUTOS (from existing logic) ─────────────────────────────────────
+function buildAtributos(){
+  var sit=g(C.SITUACAO_ATUAL)||'';
+  var abord=g(C.ABORDAGEM)||'';
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var base=sit+' '+abord;
+  var attrs=[];
+
+  var sistNome='';
+  if(/blackline/i.test(sit)) sistNome='BLACKLINE';
+  else if(/\bsap\b/i.test(sit)) sistNome='SAP';
+  else if(/\boracle\b/i.test(sit)) sistNome='ORACLE';
+  else if(/totvs/i.test(sit)) sistNome='TOTVS';
+  else if(/excel/i.test(sit)) sistNome='PLANILHA EXCEL';
+  var mMatch=sit.match(/m[oó]dulo\s+([\w\s\/\-]+?)(?:\s+para|\s+com|\s+de|\.|,|$)/i);
+  var modulo=mMatch?mMatch[1].trim().toUpperCase():'';
+  var tMatch=sit.match(/transa[çc][aã]o\s+([\w\/]+)/i);
+  var transacaoSAP=tMatch?tMatch[1].toUpperCase():'';
+
+  var objetos=[];
+  if(/balanço\s+patrimonial|\bBP\b/.test(sit)) objetos.push('BALANÇO PATRIMONIAL (BP)');
+  if(/demonstra[çc][aã]o\s+do\s+resultado|\bDRE\b/.test(sit)) objetos.push('DRE');
+  if(/ativo\s+imobilizado/i.test(sit)) objetos.push('ATIVO IMOBILIZADO');
+  if(/contas?\s+a\s+receber/i.test(sit)) objetos.push('CONTAS A RECEBER');
+  if(/faturamento/i.test(sit)) objetos.push('FATURAMENTO');
+  if(/provis[ãa][eo]/i.test(sit)) objetos.push('PROVISÕES');
+  if(/receita/i.test(sit)) objetos.push('RECEITA');
+  if(/estoqu[e]/i.test(sit)) objetos.push('ESTOQUE');
+  if(/folha\s+de\s+pagamento/i.test(sit)) objetos.push('FOLHA DE PAGAMENTO');
+  if(/fornecedor|contas?\s+a\s+pagar/i.test(sit)) objetos.push('CONTAS A PAGAR');
+  var objetoStr=objetos.slice(0,3).join(', ');
+
+  var temVariacao=/varia[çc][õo][eê]s?/i.test(sit);
+  var temConcilia=/concilia[çc][aã]o|reconcilia/i.test(sit);
+  var temAprovacao=/aprova[çc][aã]o|autoriza[çc][aã]o/i.test(sit);
+  var temCarregamento=/carregamento|upload/i.test(sit);
+  var temComparativo=/comparativamente|per[íi]odo\s+anterior/i.test(sit);
+  var temPendente=/pendente|pendentes\s+de\s+contabiliza/i.test(sit);
+  var temPlanilha=/planilha/i.test(sit);
+  var temExcecao=/exce[çc][aã]o|desvio|inconsist/i.test(sit);
+  var temMovimentacao=/movimenta[çc][aã]o|adi[çc][aã]o|baixa|transfer[êe]ncia|deprecia/i.test(sit);
+  var temAnalise=/analis[ae]|análise/i.test(sit);
+  var temRegistro=/registr[ao]|document[ao]/i.test(sit);
+  var temRevisao=/revis[aã]o/i.test(sit);
+
+  // Atributo 1: Prazo
+  var prazoQ;
+  var mesSubseq=/m[êe]s\s+subsequente|m[êe]s\s+seguinte/i.test(base);
+  var fimMes=/fim\s+do\s+m[êe]s/i.test(base);
+  var diasApos=base.match(/(\d+)\s*dias?\s*(ap[oó]s|antes|[uú]teis)/i);
+  if(mesSubseq) prazoQ='A EXECUÇÃO DO CONTROLE FOI REALIZADA ATÉ O FIM DO MÊS SUBSEQUENTE AO PERÍODO?';
+  else if(fimMes) prazoQ='O CONTROLE FOI EXECUTADO DENTRO DO PRAZO PREVISTO (ATÉ O FIM DO MÊS)?';
+  else if(diasApos) prazoQ='O CONTROLE FOI EXECUTADO DENTRO DO PRAZO DE '+diasApos[1]+' DIAS?';
+  else prazoQ='O CONTROLE FOI EXECUTADO DENTRO DO PRAZO ESPERADO PARA A FREQUÊNCIA "'+freq.toUpperCase()+'"?';
+  attrs.push({pergunta:prazoQ,comoVerif:'Verificar data de execução na evidência versus o prazo esperado. Execução fora do prazo = NÃO.',resposta:null,procedimentos:'',caminho:''});
+
+  // Atributo 2: Escopo
+  var escopoQ;
+  if(objetoStr&&temVariacao) escopoQ='TODAS AS VARIAÇÕES RELEVANTES DE '+objetoStr+' FORAM ANALISADAS E JUSTIFICADAS NO PERÍODO?';
+  else if(objetoStr&&temConcilia) escopoQ='A CONCILIAÇÃO DE '+objetoStr+' COBRIU TODAS AS TRANSAÇÕES DO PERÍODO SEM LACUNAS?';
+  else if(objetoStr&&temMovimentacao) escopoQ='TODAS AS MOVIMENTAÇÕES DE '+objetoStr+' FORAM ANALISADAS NO PERÍODO SEM OMISSÕES?';
+  else if(objetoStr) escopoQ='O CONTROLE ABRANGEU TODOS OS ITENS PREVISTOS PARA '+objetoStr+' NO PERÍODO?';
+  else if(temConcilia) escopoQ='A CONCILIAÇÃO COBRIU TODAS AS CONTAS DO PERÍODO SEM LACUNAS?';
+  else escopoQ='O ESCOPO DO CONTROLE FOI COBERTO EM SUA TOTALIDADE PARA O PERÍODO AVALIADO?';
+  attrs.push({pergunta:escopoQ,comoVerif:'Confirmar que todos os itens/contas previstos foram cobertos. Cobertura parcial sem justificativa = NÃO.',resposta:null,procedimentos:'',caminho:''});
+
+  // Atributo 3: Sistema/Fonte
+  var sistQ;
+  if(temCarregamento&&sistNome) sistQ='O CARREGAMENTO NO '+sistNome+(modulo?' – MÓDULO '+modulo:'')+' FOI EXECUTADO CORRETAMENTE E COM DADOS DO PERÍODO CORRETO?';
+  else if(transacaoSAP&&sistNome) sistQ='A CONSULTA VIA TRANSAÇÃO '+transacaoSAP+' NO '+sistNome+' COBRIU TODOS OS DOCUMENTOS DO PERÍODO SEM FILTROS INCORRETOS?';
+  else if(sistNome) sistQ='OS DADOS UTILIZADOS FORAM EXTRAÍDOS DO '+sistNome+' E CORRESPONDEM AO PERÍODO AVALIADO?';
+  else if(temPlanilha) sistQ='AS PLANILHAS DE CONTROLE ESTÃO ATUALIZADAS E COM DADOS CORRETOS DO PERÍODO AVALIADO?';
+  else sistQ='A FONTE DE DADOS UTILIZADA É A CORRETA E COBRE O PERÍODO INTEGRAL DA AMOSTRA?';
+  attrs.push({pergunta:sistQ,comoVerif:'Verificar print/exportação com nome do sistema, data de extração, filtros e período. Dados de período errado = NÃO.',resposta:null,procedimentos:'',caminho:''});
+
+  // Atributo 4: Evidência
+  var evidQ;
+  if(temAprovacao&&sistNome) evidQ='A APROVAÇÃO ESTÁ REGISTRADA NO '+sistNome+' COM IDENTIFICAÇÃO DO RESPONSÁVEL, DATA E CONTEÚDO APROVADO?';
+  else if(temAprovacao) evidQ='A APROVAÇÃO ESTÁ FORMALIZADA COM: IDENTIFICAÇÃO DO APROVADOR, DATA E EVIDÊNCIA DO CONTEÚDO APROVADO?';
+  else if(sistNome==='BLACKLINE'&&temRevisao) evidQ='A REVISÃO ESTÁ REGISTRADA NO BLACKLINE COM STATUS CONCLUÍDO, RESPONSÁVEL E DATA COMPATÍVEL?';
+  else if(sistNome==='BLACKLINE') evidQ='A EXECUÇÃO ESTÁ REGISTRADA NO BLACKLINE COM STATUS CONCLUÍDO, RESPONSÁVEL E DATA DO PERÍODO?';
+  else if(temRegistro) evidQ='A EXECUÇÃO ESTÁ DOCUMENTADA DE FORMA RASTREÁVEL COM: RESPONSÁVEL, DATA E CONTEÚDO ANALISADO?';
+  else evidQ='A EVIDÊNCIA PERMITE IDENTIFICAR: (1) QUEM EXECUTOU, (2) QUANDO EXECUTOU E (3) O QUÊ FOI ANALISADO?';
+  attrs.push({pergunta:evidQ,comoVerif:'Evidência sem data, sem identificação ou que não reflita o período da amostra não é aceita.',resposta:null,procedimentos:'',caminho:''});
+
+  // Atributo 5: Exceções
+  var exc5Q;
+  if(temPendente&&objetoStr) exc5Q='OS ITENS DE '+objetoStr+' IDENTIFICADOS COMO PENDENTES FORAM AVALIADOS E O REGISTRO MANUAL FOI REALIZADO?';
+  else if(temExcecao&&objetoStr) exc5Q='AS EXCEÇÕES OU DESVIOS IDENTIFICADOS EM '+objetoStr+' FORAM DOCUMENTADOS E ENCAMINHADOS PARA TRATAMENTO?';
+  else if(temComparativo&&temVariacao) exc5Q='AS VARIAÇÕES SEM JUSTIFICATIVA OU FORA DO PARÂMETRO ESPERADO FORAM ESCALADAS E TRATADAS?';
+  else if(temVariacao) exc5Q='AS VARIAÇÕES IDENTIFICADAS FORAM JUSTIFICADAS E SUPORTADAS POR DOCUMENTAÇÃO?';
+  else exc5Q='EVENTUAIS INCONSISTÊNCIAS IDENTIFICADAS DURANTE A EXECUÇÃO FORAM REGISTRADAS E TRATADAS FORMALMENTE?';
+  attrs.push({pergunta:exc5Q,comoVerif:'Se não houve exceções, deve constar declaração explícita. Exceção sem tratamento = NÃO.',resposta:null,procedimentos:'',caminho:''});
+
+  return attrs;
+}
+
+// ── BUILD VALIDAÇÃO DA POPULAÇÃO ──────────────────────────────────────────────
+function buildValidacaoPopulacao(){
+  var sit=g(C.SITUACAO_ATUAL)||'';
+  var extr=g(C.DESC_EXTR)||'';
+  var base=sit+' '+extr;
+  var blSrc=[];
+  var blRe=/blackline\s*[–\-]?\s*(?:m[oó]dulo\s+)?([\w\s\/]+?)(?:\s*\(([^)]+)\))?\s*(?:e\b|,|\.|$)/gi;
+  var blM;
+  while((blM=blRe.exec(base))!==null){
+    var mod=blM[1].trim();
+    if(mod.length>1) blSrc.push({mod:'Blackline'+(mod.toLowerCase().includes('blackline')?'':' – '+mod),ent:blM[2]?blM[2].trim():''});
+  }
+  if(!blSrc.length&&/blackline/i.test(base)) blSrc.push({mod:'Blackline',ent:''});
+  var sapTrans=[];
+  var tRe=/transa[çc][aã]o\s+([\w\/]+)/gi, tM;
+  while((tM=tRe.exec(base))!==null) sapTrans.push(tM[1].toUpperCase());
+  sapTrans=sapTrans.filter(function(v,i,a){return a.indexOf(v)===i;});
+  var temEmail=/e-mail|por\s+e.?mail/i.test(extr);
+  var temPlanilha=/planilha|excel/i.test(extr)&&!blSrc.length&&!sapTrans.length;
+  var instrucoes=[];
+  blSrc.forEach(function(bl){
+    instrucoes.push('Acesse o <strong>'+eh(bl.mod)+'</strong>'+(bl.ent?' para as entidades <strong>'+eh(bl.ent)+'</strong>':'')+' e extraia o relatório do período da amostra.');
+  });
+  if(sapTrans.length) instrucoes.push('No <strong>SAP</strong>, execute a transação <strong>'+sapTrans.join(' / ')+'</strong> com os mesmos parâmetros do auditado.');
+  if(temEmail) instrucoes.push('Para fontes recebidas por <strong>e-mail</strong>: solicite ao auditado os e-mails do período e verifique remetente, data e conteúdo.');
+  if(temPlanilha) instrucoes.push('Solicite a planilha e verifique a rastreabilidade dos dados: origem, data, filtros e período coberto.');
+  if(!instrucoes.length) instrucoes.push('Solicite ao auditado a demonstração ao vivo da extração com os mesmos parâmetros e período.');
+  var passos=[
+    '<strong>Identificar e acessar a(s) fonte(s) primária(s):</strong><ul style="margin:6px 0 0 16px;">'+instrucoes.map(function(i){return '<li style="margin-bottom:5px;">'+i+'</li>';}).join('')+'</ul>',
+    '<strong>Verificar completude do período:</strong> Confirmar que a população cobre integralmente o período sem lacunas.',
+    '<strong>Comparar totais:</strong> Cruzar quantidade de registros e valores com a população do auditado.',
+    '<strong>Investigar diferenças:</strong> Qualquer diferença não justificada resulta em <strong style="color:var(--red)">INEFICAZ</strong>.',
+    '<strong>Documentar:</strong> Registrar parâmetros da extração independente como evidência do procedimento.'
+  ];
+  return '<div class="rs" style="border-left:4px solid #7048e8;">'+
+    '<div class="rst" style="background:#5f3dc4;">🔍 Sugestão de Validação da População</div>'+
+    '<div style="padding:14px;">'+
+    '<p style="font-size:12px;color:#555;margin-bottom:10px;">A integridade da população é pré-requisito para a validade do teste.</p>'+
+    (extr?'<div style="background:#f0f4ff;border-left:4px solid #3b5bdb;padding:10px;font-size:12px;margin-bottom:10px;border-radius:4px;"><strong>Extração (CPT):</strong><br>'+eh(extr)+'</div>':
+      '<div class="al aw" style="margin-bottom:10px;">⚠ Campo Descrição da Extração não preenchido no CPT.</div>')+
+    '<ol class="rlist">'+passos.map(function(p){return '<li style="margin-bottom:8px;">'+p+'</li>';}).join('')+'</ol>'+
+    '</div></div>';
+}
+
+// ── ASSERTIVAS x RISCOS CORRELATION ───────────────────────────────────────────
+// Guia SOX 2025: assertivas T,VD,R,C,VZ,A devem cobrir os riscos declarados
+var ASSERT_MAP=[
+  {code:'C',  label:'Completude',              terms:['complet','omiss','não registr','nao registr','omitid','lacuna']},
+  {code:'T',  label:'Tempestividade',          terms:['tempestiv','prazo','atraso','period','atrasad','intempestiv']},
+  {code:'VD', label:'Avaliação/Divulgação',    terms:['avalia','mensura','divulga','disclosure','valor incorret','mensuração']},
+  {code:'A',  label:'Exatidão/Acurácia',       terms:['exatid','acurác','acurac','erro de cálcul','erro de calcul','imprecis','incorret']},
+  {code:'E',  label:'Existência/Ocorrência',   terms:['existênc','existenc','ocorrênc','ocorrenc','fictíc','fict','inexistent','não exist','nao exist']},
+  {code:'R',  label:'Direitos e Obrigações',   terms:['direito','obrigaç','obrigac','titularid','propriedad','custodia','custódia']}
+];
+
+function buildAssertivaxRiscoCheck(contas,riscos){
+  if(!contas.length && !riscos.length) return '';
+  var contasStr=contas.join(' ').toUpperCase();
+  var riscoStr=riscos.join(' ').toLowerCase()
+    .replace(/ção/g,'cao').replace(/ção/g,'cao').replace(/çã/g,'ca');
+  var divergencias=[];
+  ASSERT_MAP.forEach(function(am){
+    var inRisco=am.terms.some(function(t){return riscoStr.indexOf(t)>-1;});
+    var inAssert=contasStr.indexOf(am.code)>-1;
+    if(inRisco&&!inAssert) divergencias.push(am.code+' ('+am.label+')');
+  });
+  if(!divergencias.length) return '<div class="al ao" style="margin-top:10px;"><span class="ai2">✅</span><div>Correlação Assertivas × Riscos: sem divergências identificadas.</div></div>';
+  // Auto-populate OM queue for divergences
+  var omDesc='Correlação Assertivas × Riscos: os riscos associados ao controle envolvem conceitos de '+divergencias.join(', ')+
+    ', porém as assertivas SOX correspondentes não estão mapeadas no campo CONTAS/Assertivas do CPT. '+
+    'Recomenda-se revisar o mapeamento no CPT para garantir cobertura completa das assertivas relevantes.';
+  var alreadyQueued=ftOMs.some(function(o){return o._autoAssert;});
+  if(!alreadyQueued) ftOMs.push({descricao:omDesc,processo:'Mapeamento SOX — CPT',responsavel:'Área de Controles Internos',prazo:'',_autoAssert:true});
+  return '<div class="al ar" style="margin-top:10px;">'+
+    '<span class="ai2">⚠️</span>'+
+    '<div><strong>Divergência Assertivas × Riscos:</strong> As assertivas '+divergencias.join(', ')+
+    ' parecem relevantes para os riscos declarados mas não constam nas Contas/Assertivas do CPT.'+
+    '<br><small style="opacity:.8;">Uma Oportunidade de Melhoria foi gerada automaticamente na aba 💡 Oport. Melhoria.</small></div>'+
+  '</div>';
+}
+
+// ── BUILD RPA ─────────────────────────────────────────────────────────────────
+function gerarRPA(){
+  if(!ctrl){alert('Selecione um controle primeiro.');return;}
+  document.getElementById('nav-rpa').classList.remove('nav-disabled');
+  document.getElementById('rpa-content').innerHTML=buildRPA();
+  navTo('rpa');
+}
+
+function buildAnaliseIA(){
+  var sit=g(C.SITUACAO_ATUAL)||'';
+  var proc=g(C.PROC_TESTE)||'';
+  var nat=g(C.NATUREZA)||'';
+  var aut=go(C.AUTOMACAO,go(C.AUTOMACAO2,''));
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var riscCtrl=go(C.RISCO_CTRL,'');
+  var fin=go(C.FINALIDADE,go(C.FINALIDADE2,''));
+  var resp=go(C.RESP_NOME,'');
+  var descRiscos=g(C.DESC_RISCO).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var pc=g(C.PONTO_CRIT)||'';
+  var recom=g(C.RECOMEND)||'';
+  var ctrl=go(C.CTRL,go(C.ID_CTRL,''))||'';
+  var sitL=sit.toLowerCase();
+  var procL=proc.toLowerCase();
+
+  // ── Entendimento do controle ───────────────────────────────────────────────
+  var entendimento='';
+  var isPreventivo=/prevent/i.test(nat);
+  var isDetectivo=/detec/i.test(nat);
+  var isManual=/manual/i.test(aut)||!aut;
+  var isAuto=/automat/i.test(aut)||/sistema/i.test(aut)||/ti/i.test(aut);
+
+  entendimento+='Este controle ';
+  if(isPreventivo) entendimento+='tem natureza <strong>preventiva</strong>, atuando antes da ocorrência do erro ou fraude. ';
+  else if(isDetectivo) entendimento+='tem natureza <strong>detectiva</strong>, identificando desvios após a ocorrência. ';
+  else entendimento+='possui natureza <strong>'+nat+'</strong>. ';
+
+  if(isAuto) entendimento+='É executado de forma <strong>automatizada</strong> (sistema/TI), o que reduz o risco de erro humano, mas exige validação dos parâmetros de configuração. ';
+  else if(isManual) entendimento+='É executado de forma <strong>manual</strong>, dependendo da ação do responsável, o que demanda verificação de evidências físicas e consistência de aplicação. ';
+
+  if(freq) entendimento+='Sua frequência de execução é <strong>'+freq+'</strong>. ';
+  if(resp) entendimento+='O responsável pela execução é <strong>'+resp+'</strong>. ';
+
+  // ── O que o controle faz (baseado na situação atual) ──────────────────────
+  var oque='';
+  if(sit.length>20){
+    // Extrai primeiro período como síntese
+    var primeiroP=sit.split(/[.!?]/)[0].trim();
+    if(primeiroP.length>15) oque=primeiroP+'.';
+  }
+  if(!oque && fin) oque=fin;
+
+  // ── Pontos de atenção ─────────────────────────────────────────────────────
+  var pontos=[];
+
+  if(riscCtrl==='Alto') pontos.push('⚠️ <strong>Controle de alto risco</strong> — exige amostragem maior e documentação robusta das evidências.');
+  else if(riscCtrl==='Médio') pontos.push('🔸 <strong>Risco médio</strong> — atenção à consistência de aplicação ao longo do período.');
+
+  if(/aprova|aprovação|aprovou/i.test(sitL)||/aprova|aprovação/i.test(procL))
+    pontos.push('✅ Verificar se as <strong>aprovações</strong> estão devidamente registradas e são de alçada adequada.');
+
+  if(/recncilia|reconcili/i.test(sitL))
+    pontos.push('🔁 Controle envolve <strong>reconciliação</strong> — confirmar que diferenças são investigadas e resolvidas tempestivamente.');
+
+  if(/segreg/i.test(sitL)||/segreg/i.test(procL))
+    pontos.push('🔀 Envolve <strong>segregação de funções</strong> — validar que executor e aprovador são pessoas distintas.');
+
+  if(/mensal|trimestral|semestral|anual/i.test(freq)&&isManual)
+    pontos.push('📅 Controle periódico manual — verificar se foi executado em <strong>todos os períodos</strong> do escopo.');
+
+  if(/sistema|erp|sap|oracle|totvs/i.test(sitL)||isAuto)
+    pontos.push('💻 Componente sistêmico — validar <strong>parâmetros de configuração</strong> e logs do sistema.');
+
+  if(pc) pontos.push('📌 Ponto crítico identificado: <em>'+pc.substring(0,120)+(pc.length>120?'…':'')+'</em>');
+
+  if(descRiscos.length)
+    pontos.push('🎯 Risco principal a mitigar: <em>'+descRiscos[0].substring(0,150)+(descRiscos[0].length>150?'…':'')+'</em>');
+
+  if(!pontos.length) pontos.push('Sem alertas específicos identificados com base nos dados disponíveis.');
+
+  // ── Sugestão de abordagem ─────────────────────────────────────────────────
+  var sugestoes=[];
+
+  if(/aprova/i.test(sitL)||/aprova/i.test(procL))
+    sugestoes.push('Solicitar e-mails, atas ou registros de sistema que evidenciem a aprovação formal.');
+
+  if(/reconcili/i.test(sitL))
+    sugestoes.push('Obter planilha ou relatório de reconciliação com evidência de revisão e encerramento de itens pendentes.');
+
+  if(isAuto)
+    sugestoes.push('Solicitar print de tela ou log do sistema demonstrando a execução automatizada no período amostrado.');
+  else
+    sugestoes.push('Coletar evidências físicas (e-mail, formulário assinado ou tela de sistema) que comprovem a execução pelo responsável no período.');
+
+  if(/excep|excessão|exceção|exception/i.test(sitL)||/excep/i.test(procL))
+    sugestoes.push('Verificar se exceções foram identificadas, documentadas e tratadas adequadamente.');
+
+  if(recom) sugestoes.push('Recomendação de ciclos anteriores: <em>'+recom.substring(0,120)+(recom.length>120?'…':'')+'</em>');
+
+  // ── Montagem do HTML ──────────────────────────────────────────────────────
+  var h='<div style="background:linear-gradient(135deg,#f0f4ff 0%,#e8f4fd 100%);border:1.5px solid #b8d4f0;border-radius:8px;padding:16px 18px;margin-top:12px;">';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
+  h+='<span style="font-size:18px;">🤖</span>';
+  h+='<span style="font-size:13px;font-weight:800;color:#1971c2;letter-spacing:.3px;">Análise Prévia do Controle — THEMISIA AI</span>';
+  h+='<span style="margin-left:auto;font-size:10px;background:#1971c2;color:white;padding:2px 8px;border-radius:10px;font-weight:700;">ASSISTIVO</span>';
+  h+='</div>';
+
+  if(oque){
+    h+='<div style="margin-bottom:10px;">';
+    h+='<div style="font-size:11px;font-weight:700;color:#1971c2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📋 Síntese do Controle</div>';
+    h+='<div style="font-size:13px;color:#333;line-height:1.5;">'+eh(oque)+'</div>';
+    h+='</div>';
+  }
+
+  h+='<div style="margin-bottom:10px;">';
+  h+='<div style="font-size:11px;font-weight:700;color:#1971c2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">⚡ Pontos de Atenção</div>';
+  h+=pontos.map(function(p){return '<div style="font-size:12px;color:#333;line-height:1.5;margin-bottom:4px;padding-left:4px;">'+p+'</div>';}).join('');
+  h+='</div>';
+
+  h+='<div>';
+  h+='<div style="font-size:11px;font-weight:700;color:#1971c2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">🗂️ Sugestão de Abordagem</div>';
+  h+=sugestoes.map(function(s){return '<div style="font-size:12px;color:#333;line-height:1.5;margin-bottom:4px;padding-left:4px;">• '+s+'</div>';}).join('');
+  h+='</div>';
+
+  h+='<div style="margin-top:10px;font-size:10px;color:#868e96;border-top:1px solid #d0e4f7;padding-top:6px;">⚠️ Análise gerada automaticamente com base nos dados do CPT. Valide com o contexto do controle antes de aplicar.</div>';
+  h+='</div>';
+  return h;
+}
+
+
+function buildRPA(){
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var am=getAmostra(freq);
+  var tec=getTecnica(g(C.PROC_TESTE));
+  var fin=go(C.FINALIDADE,go(C.FINALIDADE2,''));
+  var aut=go(C.AUTOMACAO,go(C.AUTOMACAO2,''));
+  var design=getDesign(g(C.CLASSIF_DESIGN));
+  var riscos=g(C.RISCO).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var catRiscos=g(C.CAT_RISCO).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var descRiscos=g(C.DESC_RISCO).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var contas=g(C.CONTAS).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var objs=g(C.OBJETIVO).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var descObjs=g(C.DESC_OBJ).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var evids=g(C.EVIDENCIA_SUG).split(';').map(function(x){return x.trim();}).filter(Boolean);
+  var pc=g(C.PONTO_CRIT);
+  var rc={'Alto':'bdg-r','Médio':'bdg-y','Baixo':'bdg-g'}[g(C.RISCO_CTRL)]||'bdg';
+
+  var qs=[
+    'Como o controle é executado na prática? Descreva passo a passo.',
+    'Quem executa e quem revisa/supervisiona?',
+    'Com que frequência é executado? (CPT declara: '+(freq||'não informado')+')',
+    'Quais sistemas e ferramentas são utilizados?',
+    'Como as evidências são armazenadas e por quanto tempo?',
+    aut.toLowerCase().includes('auto')?'Quais parâmetros sistêmicos configuram o controle? Quem pode alterá-los?':null,
+    fin.toLowerCase().includes('detect')?'Quando uma exceção é encontrada, qual é o processo de escalação?':null,
+    'Houve alguma falha ou interrupção no período auditado?',
+    riscos.length?'Como este controle mitiga: "'+riscos[0].substring(0,80)+'"?':null,
+  ].filter(Boolean);
+
+  var passos=[
+    'Solicitar lista de execuções no período ('+am.j+').',
+    'Selecionar aleatoriamente '+am.n+' amostra(s), garantindo cobertura do período.',
+    'Verificar se as execuções foram feitas pelo responsável correto.',
+    'Confirmar que as execuções ocorreram dentro do prazo da frequência declarada.',
+    evids.length?'Solicitar evidências documentais: '+evids.slice(0,2).join('; ')+'.':null,
+    'Avaliar se as evidências demonstram execução completa e eficaz.',
+    fin.toLowerCase().includes('detect')?'Verificar se exceções foram devidamente tratadas e documentadas.':null,
+    'Documentar o resultado de cada amostra (OK/NOK) com justificativa.',
+    'Concluir sobre a efetividade operacional com base nas amostras.',
+  ].filter(Boolean);
+
+  var riscosTbl='';
+  if(miss(C.RISCO)){
+    riscosTbl='<div class="al ar"><span class="ai2">⚠</span><div>Campo Risco(s) não preenchido no CPT.</div></div>';
+  }else{
+    riscosTbl='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>'+
+      '<th style="background:var(--blue);color:white;padding:7px 10px;text-align:left;">Risco</th>'+
+      '<th style="background:var(--blue);color:white;padding:7px 10px;text-align:left;">Categoria</th>'+
+      '<th style="background:var(--blue);color:white;padding:7px 10px;text-align:left;">Descrição</th>'+
+      '</tr></thead><tbody>'+
+      riscos.map(function(r,i){
+        return '<tr style="background:'+(i%2?'#f9f9f9':'white')+'">'+
+          '<td style="padding:7px 10px;border:1px solid var(--border);">'+eh(r)+'</td>'+
+          '<td style="padding:7px 10px;border:1px solid var(--border);">'+eh(catRiscos[i]||'—')+'</td>'+
+          '<td style="padding:7px 10px;border:1px solid var(--border);">'+eh(descRiscos[i]||'—')+'</td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table>';
+  }
+
+  return '<div class="rpa-header">'+
+    '<h2>📄 RELATÓRIO PRELIMINAR DE AUDITORIA (RPA)</h2>'+
+    '<p>SOX · Petrobras · Emitido em: '+hoje()+'</p></div>'+
+
+    '<div class="rs"><div class="rst">1. Identificação do Controle</div>'+
+      row('ID do Controle',ec(C.ID_CTRL))+row('Nome do Controle',ec(C.CTRL))+
+      row('Empresa',ec(C.EMPRESA))+row('Diretoria',ec(C.DIRETORIA))+
+      row('Responsável',ec(C.RESP_NOME))+
+      row('Frequência',eh(freq||'—'))+row('Nível de Prova',ec(C.NIVEL_PROVA))+
+      row('Natureza',ec(C.NATUREZA))+
+    '</div>'+
+
+    '<div class="rs"><div class="rst">2. Objetivo do Controle</div>'+
+      '<div style="padding:12px 14px;">'+
+      (miss(C.OBJETIVO)?'<div class="al ar"><span class="ai2">⚠</span><div>Campo Objetivo não preenchido.</div></div>':lista(objs.length?objs:[g(C.OBJETIVO)]))+
+      (!miss(C.DESC_OBJ)?'<p style="margin-top:8px;font-size:13px;">'+eh(descObjs.join(' | '))+'</p>':'')+
+      (miss(C.CONTAS)?'<div class="al ar" style="margin-top:10px;"><span class="ai2">⚠</span><div>Contas/Assertivas não preenchidas — crítico para SOX.</div></div>':
+        '<div style="margin-top:10px;"><strong style="font-size:12px;">Contas e Assertivas:</strong>'+lista(contas)+'</div>')+
+      buildAssertivaxRiscoCheck(contas,riscos)+
+      '</div></div>'+
+
+    '<div class="rs"><div class="rst">3. Descrição e Entendimento do Controle</div>'+
+      row('Categoria',ec(C.CAT_CTRL))+row('Natureza',ec(C.NATUREZA))+
+      row('Finalidade',eh(fin||'—'))+row('Automação',eh(aut||'—'))+
+      row('Frequência',eh(freq||'—'))+row('Nível de Prova',ec(C.NIVEL_PROVA))+
+      row('Risco do Controle','<span class="bdg '+rc+'">'+go(C.RISCO_CTRL,'—')+'</span>')+
+      '<div style="padding:12px 14px;">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">Situação Atual</div>'+
+        (miss(C.SITUACAO_ATUAL)?'<div class="al aw"><span>⚠</span><div>Não preenchida.</div></div>':'<div class="rtxt">'+eh(g(C.SITUACAO_ATUAL))+'</div>')+
+        buildAnaliseIA()+
+      '</div>'+
+    '</div>'+
+
+    '<div class="rs"><div class="rst">4. Riscos Associados</div>'+
+      '<div style="padding:12px 14px;">'+riscosTbl+'</div></div>'+
+
+    '<div class="rs"><div class="rst">5. Análise do Desenho do Controle</div>'+
+      row('Classificação','<span class="bdg '+design.css+'">'+eh(g(C.CLASSIF_DESIGN)||design.l)+'</span>')+
+      row('Status Design',eh(go(C.STATUS_DESIGN,'—')))+
+      '<div style="padding:12px 14px;"><ul class="rlist">'+
+        '<li>Finalidade: <strong>'+eh(fin||'—')+'</strong></li>'+
+        '<li>Automação: <strong>'+eh(aut||'—')+'</strong></li>'+
+        (freq?'<li>Frequência <strong>'+eh(freq)+'</strong> — avaliar se é suficiente para mitigar o risco.</li>':'')+
+        '<li>Verificar segregação de funções entre quem executa e quem revisa.</li>'+
+      '</ul>'+
+      (pc?'<div class="al ar" style="margin-top:8px;"><span class="ai2">🚨</span><div><strong>Ponto Crítico:</strong> '+eh(pc)+'</div></div>':'')+
+      (g(C.RECOMEND)?'<div class="al aw" style="margin-top:8px;"><span class="ai2">💡</span><div><strong>Recomendação:</strong> '+eh(g(C.RECOMEND))+'</div></div>':'')+
+      '</div></div>'+
+
+    '<div class="rs"><div class="rst">6. Evidências Necessárias</div>'+
+      '<div style="padding:12px 14px;">'+
+      (miss(C.EVIDENCIA_SUG)?'<div class="al aw"><span>⚠</span><div>Evidências não preenchidas.</div></div>':lista(evids))+
+      '</div></div>'+
+
+    '<div class="rs"><div class="rst">7. Questionamentos ao Responsável</div>'+
+      '<div style="padding:12px 14px;">'+lista(qs)+'</div></div>'+
+
+    '<div class="rs"><div class="rst">8. Procedimento de Teste e Tabela Amostral</div>'+
+      '<div style="padding:12px 14px;">'+
+      row('Técnica',eh(tec))+row('Frequência',eh(freq||'—'))+
+      '<div style="margin-top:12px;">'+amostraTable()+'</div>'+
+      '<div style="margin-top:12px;"><strong style="font-size:12px;">Passos do procedimento:</strong>'+
+      '<ol class="rlist" style="margin-top:8px;">'+passos.map(function(p){return '<li>'+p+'</li>';}).join('')+'</ol></div>'+
+      '</div></div>'+
+
+    buildValidacaoPopulacao()+
+
+    '<div class="rs"><div class="rst">9. Constatações e Recomendações do CPT</div>'+
+      '<div style="padding:12px 14px;">'+
+      (pc?'<div class="al ar"><span class="ai2">🚨</span><div><strong>Ponto Crítico:</strong> '+eh(pc)+'</div></div>':'<div style="font-size:13px;color:var(--muted);">Sem constatações registradas no CPT.</div>')+
+      (g(C.DESC_PC)?'<p style="font-size:13px;margin-top:8px;">'+eh(g(C.DESC_PC))+'</p>':'')+
+      (g(C.RECOMEND)?'<div class="al aw" style="margin-top:8px;"><span class="ai2">💡</span><div><strong>Recomendação:</strong> '+eh(g(C.RECOMEND))+'</div></div>':'')+
+      '</div></div>';
+}
+
+function getDesign(cls){
+  var c=(cls||'').toLowerCase();
+  if(c.includes('não atende')||c.includes('nao atende'))return{l:'Não Atende',css:'bdg-r'};
+  if(c.includes('parcial'))return{l:'Atende Parcialmente',css:'bdg-y'};
+  if(c.includes('atende'))return{l:'Atende',css:'bdg-g'};
+  return{l:'A avaliar',css:'bdg-y'};
+}
+
+// ── RPA DECLARATION ───────────────────────────────────────────────────────────
+function rpaDeclarar(){
+  var nome=document.getElementById('rpa-auditor-nome').value.trim();
+  if(!nome){alert('Informe seu nome completo.');return;}
+  var now=new Date();
+  var tsBR=now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR');
+  var decl={auditor:nome,controlId:controlId,controlNome:g(C.CTRL),timestamp:now.toISOString(),timestampBR:tsBR};
+  try{localStorage.setItem('themisia_rpa_decl_'+controlId,JSON.stringify(decl));}catch(e){}
+  document.getElementById('rpa-decl-form').style.display='none';
+  document.getElementById('rpa-decl-info').style.display='block';
+  document.getElementById('rpa-decl-info').innerHTML=
+    '✅ <strong>'+eh(nome)+'</strong> declarou ter lido o RPA do controle <strong>'+eh(g(C.CTRL))+'</strong>.<br>'+
+    '<small style="opacity:.7;">Registrado em: '+tsBR+'</small>';
+  document.getElementById('nav-ft').classList.remove('nav-disabled');
+  setTimeout(function(){navTo('ft');buildFT();},800);
+}
+
+// ── BUILD FT ──────────────────────────────────────────────────────────────────
+function buildFT(){
+  document.getElementById('ft-ctrl-nome').textContent=g(C.CTRL);
+
+  // Try loading cached attributes
+  var cached=null;
+  try{cached=JSON.parse(localStorage.getItem('themisia_atrib_'+controlId)||'null');}catch(e){}
+  if(cached&&Array.isArray(cached)&&cached.length){
+    ftAtributos=cached.map(function(a){
+      return {pergunta:a.pergunta,comoVerif:a.comoVerif,resposta:null,procedimentos:'',caminho:''};
+    });
+  }else{
+    ftAtributos=buildAtributos();
+  }
+
+  ftConstatacoes=[{titulo:'',tipo:'Deficiência de Controle',descricao:'',causa:'',recomendacao:''}];
+  ftOMs=[{descricao:'',processo:'',responsavel:'',prazo:''}];
+
+  populateFTDados();
+  renderAtributos();
+  renderConstatacoes();
+  renderOMs();
+  buildFTAmostras();
+
+  // Check for saved FT
+  var savedFT=null;
+  try{savedFT=JSON.parse(localStorage.getItem('themisia_ft_'+controlId)||'null');}catch(e){}
+  if(savedFT){
+    var banner=document.getElementById('ft-saved-banner');
+    if(!banner){
+      banner=document.createElement('div');
+      banner.id='ft-saved-banner';
+      banner.className='ft-banner';
+      document.getElementById('ftpnl-dados').insertBefore(banner,document.getElementById('ftpnl-dados').firstChild);
+    }
+    banner.innerHTML='📂 FT salva em <strong>'+eh(savedFT._savedAt||'data desconhecida')+'</strong> &nbsp;'+
+      '<button class="btn-primary" onclick="carregarFT()">Carregar</button>&nbsp;'+
+      '<button class="btn-sec" onclick="document.getElementById(\'ft-saved-banner\').style.display=\'none\'">Ignorar</button>';
+    banner.style.display='flex';
+  }
+
+  navTo('ft');
+  ftNavTo('dados');
+}
+
+function populateFTDados(){
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var riscos=g(C.RISCO).split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var evids=g(C.EVIDENCIA_SUG).split(';').map(function(x){return x.trim();}).filter(Boolean);
+
+  var html=
+    '<div class="ft-sec"><div class="ft-sec-title">Cabeçalho</div><div class="ft-sec-body">'+
+      '<div class="field-ro"><label>ID Controle</label><span>'+ec(C.ID_CTRL)+'</span></div>'+
+      '<div class="field-ro"><label>Nome</label><span>'+ec(C.CTRL)+'</span></div>'+
+      '<div class="field-ro"><label>Frequência</label><span>'+eh(freq||'—')+'</span></div>'+
+      '<div class="field-ro"><label>Empresa</label><span>'+ec(C.EMPRESA)+'</span></div>'+
+      '<div class="field-ro"><label>Diretoria</label><span>'+ec(C.DIRETORIA)+'</span></div>'+
+      '<div class="field-ro"><label>Responsável</label><span>'+ec(C.RESP_NOME)+'</span></div>'+
+    '</div></div>'+
+
+    '<div class="ft-sec"><div class="ft-sec-title">1. Validação da População</div><div class="ft-sec-body">'+
+      '<div class="field-editavel">'+
+        '<div class="fe-label">Registro do Auditor'+
+          '<button onclick="ftValPopEditar()" id="btn-valpop-edit" class="btn-edit-sm">✏️ Editar</button>'+
+          '<button onclick="ftValPopSalvar()" id="btn-valpop-save" class="btn-edit-sm" style="display:none">💾 Confirmar</button>'+
+        '</div>'+
+        '<div id="ft-valpop-view" class="field-value" style="min-height:50px;color:var(--muted);font-style:italic;">Clique em ✏️ Editar para descrever como a população foi validada e se estava ok.</div>'+
+        '<textarea id="ft-valpop-edit-area" style="display:none;width:100%;min-height:120px;border:1.5px solid var(--border);border-radius:6px;padding:10px;font-size:13px;font-family:inherit;" rows="6" placeholder="Descreva como você validou a população: fonte dos dados, período coberto, quantidade de registros, integridade e completude confirmadas, etc."></textarea>'+
+        '<small class="muted">Documente aqui como a população foi obtida e validada antes da amostragem.</small>'+
+      '</div>'+
+    '</div></div>'+
+
+    '<div class="ft-sec"><div class="ft-sec-title">2. Riscos Mitigados</div><div class="ft-sec-body">'+
+      (riscos.length?'<ul class="rlist">'+riscos.map(function(r){return '<li>'+eh(r)+'</li>';}).join('')+'</ul>':
+        '<div class="al aw"><span>⚠</span><div>Riscos não preenchidos no CPT.</div></div>')+
+    '</div></div>'+
+
+    '<div class="ft-sec"><div class="ft-sec-title">3. Critério de Aprovação</div><div class="ft-sec-body">'+
+      '<ul class="rlist" style="font-size:12px;">'+
+        '<li><strong style="color:var(--ok)">EFICAZ:</strong> Todos os atributos de todas as amostras atendidos sem exceções.</li>'+
+        '<li><strong style="color:var(--red)">INEFICAZ:</strong> Qualquer atributo não atendido em qualquer amostra.</li>'+
+        '<li>Toda exceção deve ser registrada como Constatação e comunicada ao revisor.</li>'+
+      '</ul>'+
+    '</div></div>'+
+
+    '<div class="ft-sec"><div class="ft-sec-title">4. Evidências Solicitadas</div><div class="ft-sec-body">'+
+      '<div class="field-editavel">'+
+        '<div class="fe-label">Evidências do Controle'+
+          '<button onclick="ftEvidEditar()" id="btn-evid-edit" class="btn-edit-sm">✏️ Editar</button>'+
+          '<button onclick="ftEvidSalvar()" id="btn-evid-save" class="btn-edit-sm" style="display:none">💾 Confirmar</button>'+
+        '</div>'+
+        '<div id="ft-evid-view" class="field-value">'+
+          (evids.length?'<ul class="rlist">'+evids.map(function(e){return '<li>'+eh(e)+'</li>';}).join('')+'</ul>':
+            '<span style="color:var(--muted);font-style:italic;">Nenhuma evidência listada no CPT. Edite para registrar as evidências solicitadas.</span>')+
+        '</div>'+
+        '<textarea id="ft-evid-edit-area" style="display:none;width:100%;min-height:100px;border:1.5px solid var(--border);border-radius:6px;padding:10px;font-size:13px;font-family:inherit;" rows="5" placeholder="Liste as evidências solicitadas, uma por linha...">'+eh(evids.join('\n'))+'</textarea>'+
+        '<small class="muted">Registre as evidências efetivamente solicitadas ao auditado.</small>'+
+      '</div>'+
+    '</div></div>';
+
+  document.getElementById('ftpnl-dados').innerHTML=html;
+}
+
+function ftDescEditar(){
+  document.getElementById('ft-desc-view').style.display='none';
+  document.getElementById('ft-desc-edit-area').style.display='block';
+  document.getElementById('btn-desc-edit').style.display='none';
+  document.getElementById('btn-desc-save').style.display='inline-block';
+  document.getElementById('ft-desc-edit-area').value=document.getElementById('ft-desc-view').textContent;
+}
+
+function ftDescSalvar(){
+  var val=document.getElementById('ft-desc-edit-area').value;
+  document.getElementById('ft-desc-view').textContent=val;
+  document.getElementById('ft-desc-view').style.display='block';
+  document.getElementById('ft-desc-edit-area').style.display='none';
+  document.getElementById('btn-desc-edit').style.display='inline-block';
+  document.getElementById('btn-desc-save').style.display='none';
+}
+
+function ftValPopEditar(){
+  var view=document.getElementById('ft-valpop-view');
+  var area=document.getElementById('ft-valpop-edit-area');
+  var cur=view.getAttribute('data-val')||'';
+  if(cur) area.value=cur;
+  view.style.display='none';
+  area.style.display='block';
+  document.getElementById('btn-valpop-edit').style.display='none';
+  document.getElementById('btn-valpop-save').style.display='inline-block';
+  area.focus();
+}
+
+function ftValPopSalvar(){
+  var area=document.getElementById('ft-valpop-edit-area');
+  var view=document.getElementById('ft-valpop-view');
+  var val=area.value.trim();
+  view.setAttribute('data-val',val);
+  if(val){
+    view.style.fontStyle='normal';
+    view.style.color='';
+    view.textContent=val;
+  }else{
+    view.style.fontStyle='italic';
+    view.style.color='var(--muted)';
+    view.textContent='Clique em ✏️ Editar para descrever como a população foi validada e se estava ok.';
+  }
+  view.style.display='block';
+  area.style.display='none';
+  document.getElementById('btn-valpop-edit').style.display='inline-block';
+  document.getElementById('btn-valpop-save').style.display='none';
+}
+
+function ftEvidEditar(){
+  var view=document.getElementById('ft-evid-view');
+  var area=document.getElementById('ft-evid-edit-area');
+  view.style.display='none';
+  area.style.display='block';
+  document.getElementById('btn-evid-edit').style.display='none';
+  document.getElementById('btn-evid-save').style.display='inline-block';
+  area.focus();
+}
+
+function ftEvidSalvar(){
+  var area=document.getElementById('ft-evid-edit-area');
+  var view=document.getElementById('ft-evid-view');
+  var lines=area.value.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  if(lines.length){
+    view.innerHTML='<ul class="rlist">'+lines.map(function(l){return '<li>'+eh(l)+'</li>';}).join('')+'</ul>';
+  }else{
+    view.innerHTML='<span style="color:var(--muted);font-style:italic;">Nenhuma evidência registrada.</span>';
+  }
+  view.style.display='block';
+  area.style.display='none';
+  document.getElementById('btn-evid-edit').style.display='inline-block';
+  document.getElementById('btn-evid-save').style.display='none';
+}
+
+// ── ATRIBUTOS ─────────────────────────────────────────────────────────────────
+function renderAtributos(){
+  var container=document.getElementById('ftpnl-atributos');
+  var html='<div class="atrib-toolbar">'+
+    '<button onclick="atribAdicionar()" class="btn-sec">➕ Adicionar Atributo</button>'+
+    '<button onclick="salvarAtribCache()" class="btn-sec">🔖 Salvar para próximo ciclo</button>'+
+    '<span id="atrib-cache-info" class="muted-sm"></span>'+
+  '</div><div id="atrib-list"></div>'+
+  // ── Conclusão inline (integrada ao fim dos Atributos) ──
+  '<div class="ft-sec" style="margin-top:24px;border-top:2px solid var(--border);padding-top:16px;">'+
+    '<div class="ft-sec-title" style="background:linear-gradient(90deg,#003087,#1971c2);">✅ Conclusão do Teste</div>'+
+    '<div class="ft-sec-body">'+
+      '<div class="radio-lg">'+
+        '<label class="radio-eficaz">'+
+          '<input type="radio" name="conclusao-rad" value="EFICAZ" onchange="conclusaoChanged()">'+
+          '✅ EFICAZ — O controle opera de forma efetiva'+
+        '</label>'+
+        '<label class="radio-ineficaz">'+
+          '<input type="radio" name="conclusao-rad" value="INEFICAZ" onchange="conclusaoChanged()">'+
+          '❌ INEFICAZ — Foram identificados desvios'+
+        '</label>'+
+      '</div>'+
+      '<div style="margin-top:14px;">'+
+        '<label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;">Justificativa da Conclusão:</label>'+
+        '<textarea id="conclusao-just" rows="5" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px;font-size:13px;font-family:inherit;" placeholder="Fundamente a conclusão com base nos resultados dos atributos e amostras testadas..."></textarea>'+
+      '</div>'+
+      '<div id="alerta-ineficaz" class="al ar" style="display:none;margin-top:12px;">'+
+        '<span class="ai2">⚠️</span><div>Controle <strong>INEFICAZ</strong>: documente as constatações na aba ⚠️ Constatações e as oportunidades em 💡 Oport. Melhoria.</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+  container.innerHTML=html;
+  renderAtribList();
+}
+
+function renderAtribList(){
+  var list=document.getElementById('atrib-list');
+  if(!list) return;
+  list.innerHTML=ftAtributos.map(function(a,i){
+    return '<div class="atrib-card" id="atrib-card-'+i+'">'+
+      '<div class="atrib-hdr">'+
+        '<span class="atrib-n">Atributo '+(i+1)+'</span>'+
+        '<div>'+
+          '<button onclick="atribEditar('+i+')" class="btn-edit-sm">✏️</button>'+
+          '<button onclick="atribExcluir('+i+')" class="btn-del-sm">🗑️</button>'+
+        '</div>'+
+      '</div>'+
+      '<div id="atrib-dsp-'+i+'" class="atrib-dsp">'+
+        '<p class="atrib-q">'+eh(a.pergunta)+'</p>'+
+        '<p class="atrib-cv">📌 '+eh(a.comoVerif)+'</p>'+
+      '</div>'+
+      '<div id="atrib-edt-'+i+'" class="atrib-edt" style="display:none">'+
+        '<label>Pergunta:</label>'+
+        '<textarea id="atrib-ptxt-'+i+'" rows="3">'+eh(a.pergunta)+'</textarea>'+
+        '<label>Como verificar:</label>'+
+        '<textarea id="atrib-ctxt-'+i+'" rows="2">'+eh(a.comoVerif)+'</textarea>'+
+        '<div style="margin-top:8px;">'+
+          '<button onclick="atribSalvarEd('+i+')" class="btn-sm-primary">✅ Salvar</button>'+
+          '<button onclick="atribCancelar('+i+')" class="btn-sm">Cancelar</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="atrib-fields">'+
+        '<label>Resposta:</label>'+
+        '<div class="radio-row">'+
+          '<label><input type="radio" name="ar'+i+'" value="SIM" '+(a.resposta==='SIM'?'checked':'')+' onchange="atribSetResp('+i+',\'SIM\')"> SIM</label>'+
+          '<label><input type="radio" name="ar'+i+'" value="NAO" '+(a.resposta==='NAO'?'checked':'')+' onchange="atribSetResp('+i+',\'NAO\')"> NÃO</label>'+
+          '<label><input type="radio" name="ar'+i+'" value="NA" '+(a.resposta==='NA'?'checked':'')+' onchange="atribSetResp('+i+',\'NA\')"> N/A</label>'+
+        '</div>'+
+        '<label>Procedimentos executados:</label>'+
+        '<textarea id="atrib-proc-'+i+'" rows="3" placeholder="Descreva os procedimentos realizados...">'+eh(a.procedimentos||'')+'</textarea>'+
+        '<label>Caminho dos papéis de suporte:</label>'+
+        '<input type="text" id="atrib-path-'+i+'" placeholder="\\\\servidor\\SOX\\2026\\CTR\\Evidencias\\" value="'+eh(a.caminho||'')+'">'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function atribSetResp(i,val){ftAtributos[i].resposta=val;}
+
+function atribEditar(i){
+  document.getElementById('atrib-dsp-'+i).style.display='none';
+  document.getElementById('atrib-edt-'+i).style.display='block';
+}
+
+function atribCancelar(i){
+  document.getElementById('atrib-edt-'+i).style.display='none';
+  document.getElementById('atrib-dsp-'+i).style.display='block';
+}
+
+function atribSalvarEd(i){
+  var p=document.getElementById('atrib-ptxt-'+i);
+  var c=document.getElementById('atrib-ctxt-'+i);
+  if(p) ftAtributos[i].pergunta=p.value;
+  if(c) ftAtributos[i].comoVerif=c.value;
+  renderAtribList();
+  buildFTAmostras();
+}
+
+function atribExcluir(i){
+  if(!confirm('Excluir este atributo?')) return;
+  ftAtributos.splice(i,1);
+  renderAtribList();
+  buildFTAmostras();
+}
+
+function atribAdicionar(){
+  ftAtributos.push({pergunta:'NOVO ATRIBUTO — edite conforme necessário.',comoVerif:'Descreva como verificar este atributo.',resposta:null,procedimentos:'',caminho:''});
+  renderAtribList();
+  buildFTAmostras();
+}
+
+function salvarAtribCache(){
+  var cache=ftAtributos.map(function(a){return{pergunta:a.pergunta,comoVerif:a.comoVerif};});
+  try{localStorage.setItem('themisia_atrib_'+controlId,JSON.stringify(cache));}catch(e){}
+  var info=document.getElementById('atrib-cache-info');
+  if(info) info.textContent='✅ Salvo em '+new Date().toLocaleTimeString('pt-BR');
+}
+
+// ── AMOSTRAS ──────────────────────────────────────────────────────────────────
+var riscoClassif='';
+
+function getAmostraN(freq,risco){
+  var fl=(freq||'').toLowerCase();
+  var row=null;
+  for(var i=0;i<AMOSTRAL_DATA.length;i++){
+    var d=AMOSTRAL_DATA[i];
+    if(d.key==='multiplas'&&(fl.includes('várias')||fl.includes('múltiplas')||fl.includes('multiplas'))){row=d;break;}
+    else if(d.key!=='multiplas'&&fl.includes(d.key)){row=d;break;}
+  }
+  if(!row) row={a:2,b:2,c:2};
+  var r=(risco||'').toUpperCase();
+  return r==='A'?row.a:r==='B'?row.b:r==='C'?row.c:row.b;
+}
+
+function selecionarRisco(r){
+  riscoClassif=r;
+  try{localStorage.setItem('themisia_risco_classif_'+controlId,r);}catch(e){}
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var n=getAmostraN(freq,r);
+  var infoEl=document.getElementById('risco-classif-info');
+  if(infoEl) infoEl.innerHTML='<strong style="color:var(--blue);">Risco '+r+'</strong> → <span style="font-size:15px;font-weight:800;">'+n+'</span> amostra(s) para esta frequência.'+
+    ' <button onclick="gerarAmostrasAuto('+n+')" class="btn-primary" style="margin-left:12px;padding:5px 14px;">⚡ Gerar '+n+' amostras</button>';
+  // Highlight selected column in table
+  document.querySelectorAll('#tbl-amostral-body td.col-a,#tbl-amostral-body td.col-b,#tbl-amostral-body td.col-c').forEach(function(td){
+    td.style.fontWeight='';td.style.background='';td.style.color='';
+  });
+  document.querySelectorAll('#tbl-amostral-body td.col-'+r.toLowerCase()).forEach(function(td){
+    td.style.fontWeight='800';td.style.background='#e7f5ff';td.style.color='var(--blue)';
+  });
+}
+
+function gerarAmostrasAuto(n){
+  var body=document.getElementById('amostras-body');
+  if(!body) return;
+  body.innerHTML='';
+  document.getElementById('amostras-count').textContent='0';
+  for(var i=0;i<n;i++) amostraAdd();
+}
+
+function buildFTAmostras(){
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var container=document.getElementById('ftpnl-amostras');
+  var atribCols=ftAtributos.map(function(a,i){
+    return '<th>Atrib.'+(i+1)+'<br><small style="font-weight:400;font-size:9px;">'+eh(a.pergunta.substring(0,30))+'...</small></th>';
+  }).join('');
+
+  // Restore saved risk classification
+  try{var saved=localStorage.getItem('themisia_risco_classif_'+controlId);if(saved)riscoClassif=saved;}catch(e){}
+
+  // Build amostral table with named columns for highlighting
+  var fl=(freq||'').toLowerCase();
+  function matchRow(key){
+    if(key==='multiplas')return fl.includes('várias')||fl.includes('múltiplas')||fl.includes('multiplas');
+    return fl.includes(key);
+  }
+  var tblRows=AMOSTRAL_DATA.map(function(d){
+    var hl=matchRow(d.key)?'class="row-hl"':'';
+    return '<tr '+hl+'>'+
+      '<td>'+d.freq+'</td>'+
+      '<td class="col-a">'+d.a+'</td>'+
+      '<td class="col-b">'+d.b+'</td>'+
+      '<td class="col-c">'+d.c+'</td>'+
+    '</tr>';
+  }).join('');
+  var tblHtml='<div class="alert-info">Selecione a <strong>Classificação do Risco</strong> para definir o número de amostras (confirme com CONF/CI se necessário).</div>'+
+    '<p style="font-size:13px;margin-bottom:8px;">Frequência (CPT): <strong>'+eh(freq||'—')+'</strong></p>'+
+    '<table class="tbl-amostral"><thead><tr>'+
+      '<th>Frequência</th><th>🔴 Risco A</th><th>🟡 Risco B</th><th>🟢 Risco C</th>'+
+    '</tr></thead><tbody id="tbl-amostral-body">'+tblRows+'</tbody></table>';
+
+  var riscoSelector=
+    '<div class="ft-sec" style="margin-top:16px;">'+
+      '<div class="ft-sec-title">Classificação do Risco do Controle</div>'+
+      '<div class="ft-sec-body">'+
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">'+
+          ['A','B','C'].map(function(r){
+            var checked=riscoClassif===r?' checked':'';
+            var colors={A:'#c92a2a',B:'#e67700',C:'#2b8a3e'};
+            return '<label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;cursor:pointer;padding:8px 16px;border-radius:8px;border:2px solid '+(riscoClassif===r?colors[r]:'var(--border)')+';background:'+(riscoClassif===r?colors[r]+'18':'white')+';">'+
+              '<input type="radio" name="risco-classif" value="'+r+'" onchange="selecionarRisco(\''+r+'\')"'+checked+'>'+
+              '<span style="color:'+colors[r]+';">Risco '+r+'</span>'+
+            '</label>';
+          }).join('')+
+        '</div>'+
+        '<div id="risco-classif-info" style="font-size:13px;color:var(--muted);">'+
+          (riscoClassif?'Risco '+riscoClassif+' selecionado. <button onclick="gerarAmostrasAuto('+getAmostraN(freq,riscoClassif)+')" class="btn-primary" style="margin-left:12px;padding:5px 14px;">⚡ Gerar '+getAmostraN(freq,riscoClassif)+' amostras</button>':'Selecione o risco acima para definir o número de amostras.')+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  container.innerHTML=
+    tblHtml+
+    riscoSelector+
+    '<div style="margin-top:20px;"><div class="ft-sec-title" style="border-radius:6px 6px 0 0;">Registro das Amostras</div></div>'+
+    '<div class="amostras-ctrl">'+
+      '<button onclick="amostraAdd()" class="btn-sec">➕ Adicionar linha</button>'+
+      '<span style="font-size:12px;color:var(--muted);">Linhas: <span id="amostras-count">0</span></span>'+
+    '</div>'+
+    '<div class="tbl-scroll">'+
+    '<table id="tbl-amostras"><thead><tr>'+
+      '<th>Nº</th><th>ID / Referência</th>'+
+      atribCols+
+      '<th>Observações</th><th></th>'+
+    '</tr></thead><tbody id="amostras-body"></tbody></table></div>';
+
+  // Apply highlight if risco already selected
+  if(riscoClassif) selecionarRisco(riscoClassif);
+}
+
+function amostraAdd(){
+  var body=document.getElementById('amostras-body');
+  if(!body) return;
+  var n=body.rows.length+1;
+  var atribCells=ftAtributos.map(function(a,ai){
+    return '<td style="text-align:center;">'+
+      '<div style="display:flex;flex-direction:column;gap:2px;align-items:center;">'+
+        '<label style="font-size:10px;font-weight:700;color:var(--ok);cursor:pointer;white-space:nowrap;"><input type="radio" name="am'+n+'a'+ai+'"> SIM</label>'+
+        '<label style="font-size:10px;font-weight:700;color:var(--red);cursor:pointer;white-space:nowrap;"><input type="radio" name="am'+n+'a'+ai+'"> NÃO</label>'+
+        '<label style="font-size:10px;cursor:pointer;white-space:nowrap;"><input type="radio" name="am'+n+'a'+ai+'"> N/A</label>'+
+      '</div></td>';
+  }).join('');
+  var tr=document.createElement('tr');
+  tr.innerHTML=
+    '<td style="text-align:center;font-weight:700;">'+n+'</td>'+
+    '<td><input type="text" placeholder="ID / Ref." style="min-width:100px;"></td>'+
+    atribCells+
+    '<td><textarea rows="2" placeholder="Obs..." style="min-width:120px;"></textarea></td>'+
+    '<td><button onclick="amostraRemove(this)" class="btn-del-sm">🗑️</button></td>';
+  body.appendChild(tr);
+  var cnt=document.getElementById('amostras-count');
+  if(cnt) cnt.textContent=n;
+}
+
+function amostraRemove(btn){
+  var tr=btn.closest('tr');
+  if(tr) tr.parentNode.removeChild(tr);
+  var body=document.getElementById('amostras-body');
+  if(body){
+    var cnt=document.getElementById('amostras-count');
+    if(cnt) cnt.textContent=body.rows.length;
+  }
+}
+
+// ── CONCLUSÃO ─────────────────────────────────────────────────────────────────
+function buildFTConclusao(){
+  document.getElementById('ftpnl-conclusao').innerHTML=
+    '<div class="conclusao-wrap">'+
+      '<h3 style="color:var(--blue);margin-bottom:14px;">8. Conclusão do Teste</h3>'+
+      '<div class="radio-lg">'+
+        '<label class="radio-eficaz">'+
+          '<input type="radio" name="conclusao-rad" value="EFICAZ" onchange="conclusaoChanged()">'+
+          '✅ EFICAZ — O controle opera de forma efetiva'+
+        '</label>'+
+        '<label class="radio-ineficaz">'+
+          '<input type="radio" name="conclusao-rad" value="INEFICAZ" onchange="conclusaoChanged()">'+
+          '❌ INEFICAZ — Foram identificados desvios'+
+        '</label>'+
+      '</div>'+
+      '<div id="conclusao-detalhe" style="margin-top:14px;">'+
+        '<label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;">Justificativa:</label>'+
+        '<textarea id="conclusao-just" rows="6" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px;font-size:13px;font-family:inherit;" placeholder="Fundamento da conclusão com base nas amostras testadas..."></textarea>'+
+      '</div>'+
+      '<div id="alerta-ineficaz" class="alert-warning" style="display:none;margin-top:12px;">'+
+        '⚠️ Controle INEFICAZ: Documente as constatações na aba "⚠️ Constatações" e as oportunidades em "💡 Oport. Melhoria".'+
+      '</div>'+
+    '</div>';
+}
+
+function conclusaoChanged(){
+  var rads=document.querySelectorAll('input[name="conclusao-rad"]');
+  var val=null;
+  rads.forEach(function(r){if(r.checked)val=r.value;});
+  var alerta=document.getElementById('alerta-ineficaz');
+  if(alerta) alerta.style.display=(val==='INEFICAZ')?'block':'none';
+  var tbConst=document.getElementById('fttab-constatacoes');
+  var tbOM=document.getElementById('fttab-om');
+  if(val==='INEFICAZ'){
+    if(tbConst) tbConst.classList.add('badge');
+    if(tbOM) tbOM.classList.add('badge');
+  }else{
+    if(tbConst) tbConst.classList.remove('badge');
+    if(tbOM) tbOM.classList.remove('badge');
+  }
+}
+
+// ── CONSTATAÇÕES ──────────────────────────────────────────────────────────────
+function renderConstatacoes(){
+  var list=document.getElementById('ftpnl-constatacoes');
+  list.innerHTML=
+    '<div class="tab-hdr">'+
+      '<h3>Constatações Críticas Identificadas</h3>'+
+      '<button onclick="constAdd()" class="btn-primary">➕ Nova Constatação</button>'+
+    '</div>'+
+    '<div id="const-list">'+
+      ftConstatacoes.map(function(c,i){return renderConst(c,i);}).join('')+
+    '</div>';
+}
+
+function renderConst(c,i){
+  return '<div class="const-card" id="const-'+i+'">'+
+    '<div class="const-hdr">'+
+      '<strong>Constatação '+(i+1)+'</strong>'+
+      '<button onclick="constRemove('+i+')" class="btn-del-sm">🗑️ Remover</button>'+
+    '</div>'+
+    '<div class="const-body">'+
+      '<label>Título:</label>'+
+      '<input type="text" id="const-tit-'+i+'" placeholder="Título da constatação" value="'+eh(c.titulo||'')+'">'+
+      '<label>Tipo:</label>'+
+      '<select id="const-tipo-'+i+'">'+
+        '<option'+(c.tipo==='Deficiência de Controle'?' selected':'')+'>Deficiência de Controle</option>'+
+        '<option'+(c.tipo==='Deficiência Significativa'?' selected':'')+'>Deficiência Significativa</option>'+
+        '<option'+(c.tipo==='Fraqueza Material'?' selected':'')+'>Fraqueza Material</option>'+
+      '</select>'+
+      '<label>Descrição do desvio:</label>'+
+      '<textarea id="const-desc-'+i+'" rows="3" placeholder="Descreva o desvio identificado...">'+eh(c.descricao||'')+'</textarea>'+
+      '<label>Causa raiz:</label>'+
+      '<textarea id="const-causa-'+i+'" rows="2" placeholder="Causa raiz...">'+eh(c.causa||'')+'</textarea>'+
+      '<label>Recomendação:</label>'+
+      '<textarea id="const-rec-'+i+'" rows="2" placeholder="Recomendação ao gestor...">'+eh(c.recomendacao||'')+'</textarea>'+
+    '</div>'+
+  '</div>';
+}
+
+function constAdd(){
+  ftConstatacoes.push({titulo:'',tipo:'Deficiência de Controle',descricao:'',causa:'',recomendacao:''});
+  var list=document.getElementById('const-list');
+  if(list) list.innerHTML+=renderConst(ftConstatacoes[ftConstatacoes.length-1],ftConstatacoes.length-1);
+}
+
+function constRemove(i){
+  ftConstatacoes.splice(i,1);
+  renderConstatacoes();
+}
+
+// ── OPORT. MELHORIA ───────────────────────────────────────────────────────────
+function renderOMs(){
+  var list=document.getElementById('ftpnl-om');
+  list.innerHTML=
+    '<div class="tab-hdr">'+
+      '<h3>Oportunidades de Melhoria</h3>'+
+      '<button onclick="omAdd()" class="btn-primary">➕ Nova Oportunidade</button>'+
+    '</div>'+
+    '<div id="om-list">'+
+      ftOMs.map(function(o,i){return renderOM(o,i);}).join('')+
+    '</div>';
+}
+
+function renderOM(o,i){
+  return '<div class="om-card" id="om-'+i+'">'+
+    '<div class="om-hdr">'+
+      '<strong>Oportunidade '+(i+1)+'</strong>'+
+      '<button onclick="omRemove('+i+')" class="btn-del-sm">🗑️</button>'+
+    '</div>'+
+    '<div class="om-body">'+
+      '<label>Descrição:</label>'+
+      '<textarea id="om-desc-'+i+'" rows="3" placeholder="Descreva a oportunidade de melhoria...">'+eh(o.descricao||'')+'</textarea>'+
+      '<label>Processo/área impactada:</label>'+
+      '<input type="text" id="om-proc-'+i+'" placeholder="Ex: Processo de fechamento contábil" value="'+eh(o.processo||'')+'">'+
+      '<label>Responsável sugerido:</label>'+
+      '<input type="text" id="om-resp-'+i+'" placeholder="Ex: CONF/CI" value="'+eh(o.responsavel||'')+'">'+
+      '<label>Prazo sugerido:</label>'+
+      '<input type="text" id="om-prazo-'+i+'" placeholder="Ex: 30/09/2026" value="'+eh(o.prazo||'')+'">'+
+    '</div>'+
+  '</div>';
+}
+
+function omAdd(){
+  ftOMs.push({descricao:'',processo:'',responsavel:'',prazo:''});
+  var list=document.getElementById('om-list');
+  if(list) list.innerHTML+=renderOM(ftOMs[ftOMs.length-1],ftOMs.length-1);
+}
+
+function omRemove(i){
+  ftOMs.splice(i,1);
+  renderOMs();
+}
+
+// ── COLLECT FT DATA FROM DOM ──────────────────────────────────────────────────
+function coletarAtributos(){
+  return ftAtributos.map(function(a,i){
+    var proc=document.getElementById('atrib-proc-'+i);
+    var path=document.getElementById('atrib-path-'+i);
+    var rads=document.querySelectorAll('input[name="ar'+i+'"]');
+    var resp=null;
+    rads.forEach(function(r){if(r.checked)resp=r.value;});
+    return {pergunta:a.pergunta,comoVerif:a.comoVerif,resposta:resp||a.resposta,
+      procedimentos:proc?proc.value:'',caminho:path?path.value:''};
+  });
+}
+
+function coletarConstatacoes(){
+  return ftConstatacoes.map(function(c,i){
+    return {
+      titulo:(document.getElementById('const-tit-'+i)||{value:c.titulo||''}).value,
+      tipo:(document.getElementById('const-tipo-'+i)||{value:c.tipo||''}).value,
+      descricao:(document.getElementById('const-desc-'+i)||{value:c.descricao||''}).value,
+      causa:(document.getElementById('const-causa-'+i)||{value:c.causa||''}).value,
+      recomendacao:(document.getElementById('const-rec-'+i)||{value:c.recomendacao||''}).value
+    };
+  });
+}
+
+function coletarOMs(){
+  return ftOMs.map(function(o,i){
+    return {
+      descricao:(document.getElementById('om-desc-'+i)||{value:o.descricao||''}).value,
+      processo:(document.getElementById('om-proc-'+i)||{value:o.processo||''}).value,
+      responsavel:(document.getElementById('om-resp-'+i)||{value:o.responsavel||''}).value,
+      prazo:(document.getElementById('om-prazo-'+i)||{value:o.prazo||''}).value
+    };
+  });
+}
+
+function coletarAmostras(){
+  var body=document.getElementById('amostras-body');
+  if(!body) return[];
+  var rows=[];
+  var trs=body.querySelectorAll('tr');
+  trs.forEach(function(tr,idx){
+    var inputs=tr.querySelectorAll('input[type=text]');
+    var textareas=tr.querySelectorAll('textarea');
+    var id=inputs.length?inputs[0].value:'';
+    var obs=textareas.length?textareas[0].value:'';
+    var resps=[];
+    ftAtributos.forEach(function(a,ai){
+      var rads=tr.querySelectorAll('input[name="am'+(idx+1)+'a'+ai+'"]');
+      var v=null;
+      rads.forEach(function(r){if(r.checked)v=r.parentElement.textContent.trim();});
+      resps.push(v||'');
+    });
+    rows.push({n:idx+1,id:id,respostas:resps,obs:obs});
+  });
+  return rows;
+}
+
+function coletarConclusao(){
+  var rads=document.querySelectorAll('input[name="conclusao-rad"]');
+  var val=null;
+  rads.forEach(function(r){if(r.checked)val=r.value;});
+  var just=document.getElementById('conclusao-just');
+  return{resultado:val,justificativa:just?just.value:''};
+}
+
+// ── SAVE FT ───────────────────────────────────────────────────────────────────
+function salvarFT(){
+  salvarAtribCache();
+  var data={
+    _savedAt:new Date().toLocaleString('pt-BR'),
+    controlId:controlId,
+    controlNome:g(C.CTRL),
+    atributos:coletarAtributos(),
+    amostras:coletarAmostras(),
+    conclusao:coletarConclusao(),
+    constatacoes:coletarConstatacoes(),
+    oportunidades:coletarOMs()
+  };
+  try{localStorage.setItem('themisia_ft_'+controlId,JSON.stringify(data));}catch(e){
+    alert('Erro ao salvar: '+e.message);return;
+  }
+  var msg=document.getElementById('ft-save-msg');
+  if(msg){
+    var t=new Date();
+    msg.textContent='✅ Salvo às '+t.toLocaleTimeString('pt-BR');
+    setTimeout(function(){msg.textContent='';},5000);
+  }
+}
+
+function carregarFT(){
+  var saved=null;
+  try{saved=JSON.parse(localStorage.getItem('themisia_ft_'+controlId)||'null');}catch(e){}
+  if(!saved){alert('Nenhuma FT salva para este controle.');return;}
+  // Restore atributos
+  if(saved.atributos&&saved.atributos.length){
+    ftAtributos=saved.atributos;
+    renderAtribList();
+    buildFTAmostras();
+  }
+  // Restore conclusao
+  if(saved.conclusao){
+    var rads=document.querySelectorAll('input[name="conclusao-rad"]');
+    rads.forEach(function(r){if(r.value===saved.conclusao.resultado)r.checked=true;});
+    var just=document.getElementById('conclusao-just');
+    if(just&&saved.conclusao.justificativa) just.value=saved.conclusao.justificativa;
+    conclusaoChanged();
+  }
+  // Restore constatacoes
+  if(saved.constatacoes&&saved.constatacoes.length){
+    ftConstatacoes=saved.constatacoes;
+    renderConstatacoes();
+  }
+  // Restore OMs
+  if(saved.oportunidades&&saved.oportunidades.length){
+    ftOMs=saved.oportunidades;
+    renderOMs();
+  }
+  var banner=document.getElementById('ft-saved-banner');
+  if(banner) banner.style.display='none';
+  alert('✅ FT carregada com sucesso!');
+}
+
+// ── EXPORT HTML ───────────────────────────────────────────────────────────────
+function exportarHTML(){
+  var atribs=coletarAtributos();
+  var concl=coletarConclusao();
+  var consts=coletarConstatacoes();
+  var oms=coletarOMs();
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'+
+    '<title>FT SOX — '+eh(g(C.ID_CTRL))+'</title>'+
+    '<style>body{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:20px;}'+
+    'h1{color:#003087;font-size:16px;}h2{color:#003087;font-size:13px;border-bottom:2px solid #003087;padding-bottom:4px;margin:14px 0 8px;}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:12px;}th{background:#003087;color:#fff;padding:6px 10px;text-align:left;}'+
+    'td{padding:6px 10px;border:1px solid #ddd;}tr:nth-child(even)td{background:#f8f8f8;}'+
+    '.eficaz{color:#2b8a3e;font-weight:700;}.ineficaz{color:#c0392b;font-weight:700;}'+
+    '.section{background:#f5f7ff;border-left:4px solid #003087;padding:8px 12px;margin-bottom:8px;}'+
+    '</style></head><body>'+
+    '<h1>FOLHA DE TESTE SOX — '+eh(g(C.CTRL))+' ('+ec(C.ID_CTRL)+')</h1>'+
+    '<p>Petrobras · Emitida em: '+hoje()+'</p>'+
+    '<h2>Identificação</h2>'+
+    '<table><tr><th>Campo</th><th>Valor</th></tr>'+
+    '<tr><td>Empresa</td><td>'+ec(C.EMPRESA)+'</td></tr>'+
+    '<tr><td>Diretoria</td><td>'+ec(C.DIRETORIA)+'</td></tr>'+
+    '<tr><td>Frequência</td><td>'+eh(freq||'—')+'</td></tr>'+
+    '<tr><td>Responsável</td><td>'+ec(C.RESP_NOME)+'</td></tr>'+
+    '</table>'+
+    '<h2>Atributos</h2>'+
+    '<table><tr><th>#</th><th>Pergunta</th><th>Como Verificar</th><th>Resposta</th><th>Procedimentos</th><th>Caminho</th></tr>'+
+    atribs.map(function(a,i){
+      return '<tr><td>'+(i+1)+'</td><td>'+eh(a.pergunta)+'</td><td>'+eh(a.comoVerif)+'</td>'+
+        '<td>'+(a.resposta||'—')+'</td><td>'+eh(a.procedimentos||'—')+'</td><td>'+eh(a.caminho||'—')+'</td></tr>';
+    }).join('')+
+    '</table>'+
+    '<h2>Conclusão</h2>'+
+    '<p class="'+(concl.resultado==='EFICAZ'?'eficaz':'ineficaz')+'">'+(concl.resultado||'NÃO DECLARADO')+'</p>'+
+    '<p>'+eh(concl.justificativa||'—')+'</p>'+
+    (consts.length?'<h2>Constatações</h2>'+consts.map(function(c,i){
+      return '<div class="section"><strong>Constatação '+(i+1)+': '+eh(c.titulo)+'</strong><br>Tipo: '+eh(c.tipo)+'<br>'+eh(c.descricao)+'</div>';
+    }).join(''):'<h2>Constatações</h2><p>Nenhuma.</p>')+
+    (oms.length?'<h2>Oportunidades de Melhoria</h2>'+oms.map(function(o,i){
+      return '<div class="section"><strong>Oportunidade '+(i+1)+'</strong><br>'+eh(o.descricao)+'<br>Responsável: '+eh(o.responsavel)+'</div>';
+    }).join(''):'')+
+    '</body></html>';
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='FT_SOX_'+controlId+'_'+new Date().toISOString().slice(0,10)+'.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
+function exportarExcel(){
+  if(typeof XLSX==='undefined'){alert('Biblioteca XLSX não carregada.');return;}
+  var wb=XLSX.utils.book_new();
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var dadosData=[
+    ['Campo','Valor'],
+    ['ID Controle',g(C.ID_CTRL)],['Nome',g(C.CTRL)],
+    ['Empresa',g(C.EMPRESA)],['Diretoria',g(C.DIRETORIA)],
+    ['Frequência',freq],['Responsável',g(C.RESP_NOME)],
+    ['Nível de Prova',g(C.NIVEL_PROVA)]
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(dadosData),'Dados');
+
+  var atribs=coletarAtributos();
+  var atribData=[['#','Pergunta','Como Verificar','Resposta','Procedimentos','Caminho']];
+  atribs.forEach(function(a,i){
+    atribData.push([i+1,a.pergunta,a.comoVerif,a.resposta||'',a.procedimentos||'',a.caminho||'']);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(atribData),'Atributos');
+
+  var amostras=coletarAmostras();
+  var amHdr=['Nº','ID/Referência'].concat(ftAtributos.map(function(a,i){return 'Atrib.'+(i+1);})).concat(['Observações']);
+  var amData=[amHdr];
+  amostras.forEach(function(r){
+    amData.push([r.n,r.id].concat(r.respostas).concat([r.obs]));
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(amData),'Amostras');
+
+  var concl=coletarConclusao();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Resultado','Justificativa'],[concl.resultado||'',concl.justificativa||'']]),'Conclusão');
+
+  var consts=coletarConstatacoes();
+  var cData=[['#','Título','Tipo','Descrição','Causa Raiz','Recomendação']];
+  consts.forEach(function(c,i){cData.push([i+1,c.titulo,c.tipo,c.descricao,c.causa,c.recomendacao]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cData),'Constatações');
+
+  var oms=coletarOMs();
+  var oData=[['#','Descrição','Processo/Área','Responsável','Prazo']];
+  oms.forEach(function(o,i){oData.push([i+1,o.descricao,o.processo,o.responsavel,o.prazo]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(oData),'Oport. Melhoria');
+
+  XLSX.writeFile(wb,'FT_'+controlId+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function exportarPDF(){window.print();}
+
+// ── REVISOR ───────────────────────────────────────────────────────────────────
+var revMode='padrao';
+
+function setMode(m){
+  revMode=m;
+  document.getElementById('mode-padrao').className='mode-btn'+(m==='padrao'?' active':'');
+  document.getElementById('mode-critico').className='mode-btn'+(m==='critico'?' active':'');
+  var desc=document.getElementById('mode-desc');
+  desc.innerHTML=m==='critico'
+    ?'<strong style="color:#c92a2a;">Crítico (ADC):</strong> Simula auditoria externa. Evidências vagas resultam em devolução.'
+    :'<strong>Padrão:</strong> Revisão equilibrada com foco em completude e consistência.';
+}
+
+function updateRevCtx(){
+  var prereq=document.getElementById('rev-prereq');
+  var ctxSec=document.getElementById('rev-ctx-sec');
+  var ctxBox=document.getElementById('rev-ctx-box');
+  if(!ctrl){if(prereq)prereq.style.display='block';if(ctxSec)ctxSec.style.display='none';return;}
+  if(prereq)prereq.style.display='none';
+  if(ctxSec)ctxSec.style.display='block';
+  if(ctxBox) ctxBox.innerHTML='<strong>'+eh(g(C.ID_CTRL))+'</strong> — '+eh(g(C.CTRL))+
+    '<br>Frequência: '+eh(go(C.FREQUENCIA,go(C.FREQUENCIA2,'—')))+' | Responsável: '+eh(go(C.RESP_NOME,'—'));
+}
+
+function buildReviewFromDOM(){
+  if(!ctrl){alert('Selecione um controle e gere a Folha de Teste primeiro.');return;}
+  var attrs=buildAtributos();
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var am=getAmostra(freq);
+  var atributos=coletarAtributos();
+  var simCount=0,naoCount=0;
+  atributos.forEach(function(a){
+    if(a.resposta==='SIM') simCount++;
+    else if(a.resposta==='NAO') naoCount++;
+  });
+  var semResposta=atributos.filter(function(a){return!a.resposta;}).length;
+  var temProc=atributos.filter(function(a){return(a.procedimentos||'').length>10;}).length>0;
+  var temCaminho=atributos.filter(function(a){return(a.caminho||'').length>5;}).length;
+  var procVago=atributos.filter(function(a){return(a.procedimentos||'').length<40&&(a.procedimentos||'').length>0;}).length;
+  var concl=coletarConclusao();
+  var consts=coletarConstatacoes().filter(function(c){return(c.descricao||'').length>5;});
+  var oms=coletarOMs().filter(function(o){return(o.descricao||'').length>5;});
+  doReview({
+    simCount:simCount,naoCount:naoCount,semResposta:semResposta,
+    totalRespostas:simCount+naoCount,
+    temProc:temProc,procVago:procVago,
+    temCaminho:temCaminho,
+    temConstat:consts.length>0,
+    temPlano:oms.length>0,
+    concEficaz:concl.resultado==='EFICAZ',
+    concIneficaz:concl.resultado==='INEFICAZ',
+    temConclusao:!!concl.resultado,
+    temPopulacao:false,
+    fonte:'Folha de Teste preenchida no THEMISIA'
+  });
+}
+
+function buildReviewFromText(){
+  if(!ctrl){alert('Selecione um controle primeiro.');return;}
+  var pt=document.getElementById('rev-pdf-text').value.trim();
+  if(!pt){alert('Cole o texto da Folha de Teste.');return;}
+  var ptU=pt.toUpperCase();
+  var attrs=buildAtributos();
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var am=getAmostra(freq);
+  var naoCount=(ptU.match(/\bN[AÃ]O\b/g)||[]).length;
+  var simCount=(ptU.match(/\bSIM\b/g)||[]).length;
+  var procMatches=pt.match(/procedimentos?\s+executados?[:\s]*([^\n]{15,})/gi)||[];
+  var caminhoMatches=(pt.match(/caminho[^:\n]*:[^\n]{5,}/gi)||[]).filter(function(c){return!/ex:/i.test(c);});
+  var concEficaz=(ptU.match(/\bEFICAZ\b/g)||[]).length>(ptU.match(/\bINEFICAZ\b/g)||[]).length;
+  var concIneficaz=(ptU.match(/\bINEFICAZ\b/g)||[]).length>0;
+  doReview({
+    simCount:simCount,naoCount:naoCount,semResposta:Math.max(0,(am.n*attrs.length)-simCount-naoCount),
+    totalRespostas:simCount+naoCount,temProc:procMatches.length>0,
+    procVago:procMatches.filter(function(p){return p.length<40;}).length,
+    temCaminho:caminhoMatches.length,
+    temConstat:/constata[çc][õo]es?\s+cr[íi]ticas?/i.test(pt),
+    temPlano:/plano\s+de\s+a[çc][aã]o/i.test(pt),
+    concEficaz:concEficaz,concIneficaz:concIneficaz,
+    temConclusao:concEficaz||concIneficaz,
+    temPopulacao:/extra[çc][aã]o\s+independente/i.test(pt),
+    fonte:'Texto colado'
+  });
+}
+
+function doReview(d){
+  var isCrit=(revMode==='critico');
+  var attrs=buildAtributos();
+  var freq=go(C.FREQUENCIA,go(C.FREQUENCIA2,''));
+  var am=getAmostra(freq);
+  var criterios=[],pontos=[],perguntas=[];
+  function crit(label,ok,peso,obs,perg){
+    criterios.push({label:label,ok:ok,peso:peso,obs:obs||''});
+    if(!ok){if(obs)pontos.push(obs);if(perg)perguntas.push(perg);}
+  }
+  var concCoerente=d.concIneficaz?(d.naoCount>0):(d.naoCount===0);
+  crit('Conclusão declarada',d.temConclusao,2,!d.temConclusao?'Campo de conclusão não preenchido.':'','O campo conclusão foi preenchido?');
+  crit('Coerência: conclusão condiz com atributos',concCoerente||(!d.concEficaz&&!d.concIneficaz),3,
+    !concCoerente?'Há '+d.naoCount+' NÃO(s) mas conclusão é EFICAZ — inconsistente.':'','Como concluiu EFICAZ com NÃO(s) registrados?');
+  var respEsp=am.n*attrs.length;
+  crit('Atributos respondidos (esperado: '+respEsp+')',d.totalRespostas>=respEsp*0.7,isCrit?3:2,
+    d.totalRespostas<respEsp*0.7?'Apenas '+d.totalRespostas+' de '+respEsp+' esperadas.':'','Todos os atributos foram respondidos para cada amostra?');
+  crit('Procedimentos descritos',d.temProc,isCrit?3:2,!d.temProc?'Nenhum procedimento descrito. Obrigatório para rastreabilidade.':'','O que foi feito concretamente para verificar cada atributo?');
+  crit('Referências de evidência',d.temCaminho>=Math.ceil(attrs.length/2),isCrit?3:2,
+    d.temCaminho<Math.ceil(attrs.length/2)?'Apenas '+d.temCaminho+' referência(s) para '+attrs.length+' atributo(s).':'','Onde estão armazenadas as evidências?');
+  if(d.naoCount>0){
+    crit('Constatações documentadas',d.temConstat,3,!d.temConstat?d.naoCount+' NÃO(s) sem constatação documentada.':'','Falhas foram registradas formalmente?');
+    crit('Recomendações/OMs documentadas',d.temPlano,isCrit?3:2,!d.temPlano?'NÃO(s) sem ações corretivas propostas.':'','Quais ações corretivas foram propostas?');
+  }
+  var totalPeso=0,pesoOK=0;
+  criterios.forEach(function(c){totalPeso+=c.peso;if(c.ok)pesoOK+=c.peso;});
+  var score=Math.round(pesoOK/totalPeso*100);
+  var bloqueantes=criterios.filter(function(c){return!c.ok&&c.peso>=3;});
+  var status,sCss,sIcon;
+  if(d.concIneficaz){status='INEFICAZ';sCss='#c92a2a';sIcon='🔴';}
+  else if(bloqueantes.length>0||score<(isCrit?80:65)){status='DEVOLVIDO PARA COMPLEMENTAÇÃO';sCss='#e67700';sIcon='🟠';}
+  else if(score<(isCrit?95:85)){status='APROVADO COM RESSALVAS';sCss='#2b8a3e';sIcon='🟡';}
+  else{status='APROVADO';sCss='#2b8a3e';sIcon='🟢';}
+  var nokList=criterios.filter(function(c){return!c.ok;});
+  var out='<div style="border:2px solid '+sCss+';border-radius:8px;overflow:hidden;margin-bottom:14px;">'+
+    '<div style="background:'+sCss+';color:white;padding:14px 20px;display:flex;align-items:center;gap:12px;">'+
+      '<div style="font-size:28px;">'+sIcon+'</div>'+
+      '<div style="flex:1;"><div style="font-size:16px;font-weight:800;">'+status+'</div>'+
+        '<div style="font-size:11px;opacity:.9;">Modo: '+(isCrit?'Crítico':'Padrão')+' · Fonte: '+eh(d.fonte)+'</div></div>'+
+      '<div style="background:rgba(255,255,255,.2);padding:8px 14px;border-radius:6px;text-align:center;">'+
+        '<div style="font-size:22px;font-weight:800;">'+score+'%</div>'+
+        '<div style="font-size:10px;">qualidade</div></div>'+
+    '</div></div>'+
+    '<div class="rev-sec"><div class="rev-st">Checklist ('+criterios.filter(function(c){return c.ok;}).length+'/'+criterios.length+' OK)</div>'+
+      '<div style="padding:12px;">'+criterios.map(function(c){
+        return '<div style="display:flex;gap:8px;padding:6px 8px;border-radius:4px;margin-bottom:4px;background:'+(c.ok?'#ebfbee':'#fff5f5')+';border:1px solid '+(c.ok?'#b2f2bb':'#ffc9c9')+';">'+
+          '<span>'+(c.ok?'✅':'❌')+'</span>'+
+          '<div style="font-size:12px;"><strong>'+eh(c.label)+'</strong>'+
+          (c.obs&&!c.ok?'<br><span style="color:#c92a2a;font-size:11px;">'+eh(c.obs)+'</span>':'')+
+          '</div></div>';
+      }).join('')+'</div>'+
+    '</div>'+
+    (nokList.length?'<div class="rev-sec"><div class="rev-st" style="color:#c92a2a;">'+nokList.length+' ponto(s) para complementar</div>'+
+      '<div style="padding:12px;"><ol style="margin:0;padding-left:16px;font-size:12px;line-height:2;">'+
+      nokList.map(function(c){return '<li><strong>'+eh(c.label)+'</strong>'+(c.obs?': '+eh(c.obs):'')+'</li>';}).join('')+
+      '</ol></div></div>':'')+
+    '<div class="rev-sec"><div class="rev-st" style="color:'+sCss+';">Conclusão do Revisor</div>'+
+      '<div style="padding:12px;font-size:13px;line-height:1.7;">'+
+        (status==='APROVADO'?'Trabalho completo e adequado para certificação SOX.':
+         status==='APROVADO COM RESSALVAS'?'Trabalho atende aos critérios principais. Os pontos destacados são recomendados.':
+         status==='DEVOLVIDO PARA COMPLEMENTAÇÃO'?'Lacunas impedem aprovação. Complementar antes de novo envio.':
+         'Controle INEFICAZ. Registrar Ponto Crítico e comunicar ao gestor.')+
+      '<div style="font-size:11px;color:#888;margin-top:6px;">Emitido: '+hoje()+' · THEMISIA v2.0</div>'+
+      '</div></div>';
+  var res=document.getElementById('rev-resultado');
+  res.innerHTML=out;
+  res.style.display='block';
+  res.scrollIntoView({behavior:'smooth'});
+}
+
+// ── MÓDULO 3 ──────────────────────────────────────────────────────────────────
+var M3_DIMS=[
+  {id:'doc',label:'Qualidade da Documentação',sub:'Clareza, organização e completude dos papéis de trabalho',peso:1},
+  {id:'evid',label:'Suficiência das Evidências',sub:'As evidências suportam adequadamente a conclusão',peso:1},
+  {id:'concl',label:'Clareza da Conclusão',sub:'A conclusão é fundamentada e consistente com os atributos',peso:1},
+  {id:'temp',label:'Tempestividade',sub:'Trabalho entregue dentro do prazo do ciclo',peso:1},
+  {id:'risco',label:'Identificação de Riscos/Exceções',sub:'Desvios e pontos críticos foram adequadamente identificados',peso:1}
+];
+var M3_NOTAS_LABEL=['','1 — Insuficiente','2 — Abaixo do Esperado','3 — Atende','4 — Acima do Esperado','5 — Excelente'];
+var M3_NOTAS_CSS=['','nb1','nb2','nb3','nb4','nb5'];
+var m3Notas={};
+var m3Data=[];
+
+function m3RenderSummaryCards(){
+  var div=document.getElementById('m3-summary-cards');
+  if(!div) return;
+  var lista=m3GetStorage();
+  if(!lista.length){div.innerHTML='';return;}
+  var medias=lista.map(function(a){return a.media;});
+  var mediaGeral=Math.round(medias.reduce(function(s,v){return s+v;},0)/medias.length*10)/10;
+  var notaAlta=Math.max.apply(null,medias);
+  var notaBaixa=Math.min.apply(null,medias);
+  var qtdControles=lista.length;
+  function cor(n){return n>=4?'#2b8a3e':n>=3?'#1971c2':n>=2?'#e67700':'#c92a2a';}
+  function card(icon,label,valor,color){
+    return '<div style="background:white;border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-align:center;">'+
+      '<div style="font-size:22px;margin-bottom:4px;">'+icon+'</div>'+
+      '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+label+'</div>'+
+      '<div style="font-size:24px;font-weight:800;color:'+(color||'var(--blue)')+'">'+valor+'</div>'+
+    '</div>';
+  }
+  div.innerHTML=
+    card('📊','Média Geral',mediaGeral.toFixed(1),cor(mediaGeral))+
+    card('⬆️','Nota Mais Alta',notaAlta.toFixed(1),cor(notaAlta))+
+    card('⬇️','Nota Mais Baixa',notaBaixa.toFixed(1),cor(notaBaixa))+
+    card('🗂️','Controles Avaliados',qtdControles,'var(--blue)');
+}
+
+var m3EditandoId=null;
+
+function m3Editar(id){
+  var lista=m3GetStorage();
+  var av=null;
+  for(var i=0;i<lista.length;i++){if(lista[i].id===id){av=lista[i];break;}}
+  if(!av) return;
+  m3EditandoId=id;
+  // Switch to form tab
+  var formTab=document.getElementById('m3tab-form');
+  if(formTab) m3Aba('m3-pane-form',formTab);
+  // Fill form fields
+  function set(id,val){var el=document.getElementById(id);if(el)el.value=val||'';}
+  set('m3-inp-auditor',av.auditor);
+  set('m3-inp-ciclo',av.ciclo);
+  set('m3-inp-controle',av.controle);
+  set('m3-inp-revisor',av.revisor);
+  set('m3-inp-obs',av.obs);
+  // Set dimension notes
+  m3Notas={};
+  Object.keys(av.notas||{}).forEach(function(k){m3Notas[k]=av.notas[k];});
+  // Re-render dims using existing star logic
+  M3_DIMS.forEach(function(d){if(m3Notas[d.id]) m3SetNota(d.id,m3Notas[d.id]);});
+  // Update save button label
+  var btn=document.querySelector('#m3-pane-form .btn-primary');
+  if(btn) btn.innerHTML='✏️ Atualizar Avaliação';
+  var msg=document.getElementById('m3-save-msg');
+  if(msg){msg.innerHTML='ℹ️ Editando avaliação existente — salve para confirmar.';msg.style.display='block';}
+}
+
+function m3Init(){
+  m3LoadFromStorage();
+  if(m3Data.length===0) m3SetStorage([
+    {id:1,data:'05/06/2026',auditor:'Ana Beatriz Lima',ciclo:'2026-T2',controle:'CCC08',revisor:'Carlos Menezes',obs:'Bom trabalho.',media:4.2,notas:{doc:4,evid:4,concl:5,temp:4,risco:4}},
+    {id:2,data:'04/06/2026',auditor:'Ricardo Souza',ciclo:'2026-T2',controle:'ATI05',revisor:'Carlos Menezes',obs:'Procedimentos vagos em 2 atributos.',media:2.6,notas:{doc:2,evid:3,concl:3,temp:3,risco:2}},
+    {id:3,data:'03/06/2026',auditor:'Fernanda Rocha',ciclo:'2026-T2',controle:'IGE05',revisor:'Carlos Menezes',obs:'Excelente documentação.',media:4.8,notas:{doc:5,evid:5,concl:5,temp:4,risco:5}}
+  ]);
+  var container=document.getElementById('m3-dims');
+  if(!container) return;
+  container.innerHTML=M3_DIMS.map(function(d){
+    return '<div class="dim-row" id="dimrow-'+d.id+'">'+
+      '<div><div class="dim-label">'+d.label+'</div><div class="dim-sub">'+d.sub+'</div></div>'+
+      '<div><div class="star-row" id="stars-'+d.id+'">'+
+        [1,2,3,4,5].map(function(n){
+          return '<button class="star-btn" data-dim="'+d.id+'" data-val="'+n+'" onclick="m3SetNota(\''+d.id+'\','+n+')" title="'+M3_NOTAS_LABEL[n]+'">★</button>';
+        }).join('')+
+      '</div><div style="font-size:10px;color:#868e96;text-align:right;margin-top:2px;" id="nota-label-'+d.id+'">Sem nota</div></div>'+
+    '</div>';
+  }).join('');
+  m3RefreshSelects();m3RenderPainelAuditor();m3RenderCiclo();m3RenderSummaryCards();
+}
+
+function m3SetNota(dim,val){
+  m3Notas[dim]=val;
+  var row=document.getElementById('stars-'+dim);
+  if(row) row.querySelectorAll('.star-btn').forEach(function(b){b.classList.toggle('on',+b.getAttribute('data-val')<=val);});
+  var lbl=document.getElementById('nota-label-'+dim);
+  if(lbl) lbl.innerHTML='<span class="nota-badge '+M3_NOTAS_CSS[val]+'">'+M3_NOTAS_LABEL[val]+'</span>';
+  var temBaixa=Object.keys(m3Notas).some(function(k){return m3Notas[k]<3;});
+  var alertEl=document.getElementById('m3-alert-obrig');
+  if(alertEl) alertEl.style.display=temBaixa?'flex':'none';
+}
+
+function m3UsarCtrlAtual(){
+  if(!ctrl){alert('Selecione um controle primeiro.');return;}
+  var inp=document.getElementById('m3-inp-controle');
+  if(inp) inp.value=g(C.ID_CTRL)+' — '+g(C.CTRL);
+}
+
+function m3Limpar(){
+  m3Notas={};
+  ['m3-inp-auditor','m3-inp-ciclo','m3-inp-controle','m3-inp-revisor','m3-inp-obs'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  var alertEl=document.getElementById('m3-alert-obrig');
+  if(alertEl) alertEl.style.display='none';
+  M3_DIMS.forEach(function(d){
+    var r=document.getElementById('stars-'+d.id);
+    if(r) r.querySelectorAll('.star-btn').forEach(function(b){b.classList.remove('on');});
+    var l=document.getElementById('nota-label-'+d.id);
+    if(l) l.textContent='Sem nota';
+  });
+}
+
+function m3Salvar(){
+  var auditor=(document.getElementById('m3-inp-auditor')||{value:''}).value.trim();
+  var ciclo=(document.getElementById('m3-inp-ciclo')||{value:''}).value.trim();
+  var controle=(document.getElementById('m3-inp-controle')||{value:''}).value.trim();
+  var revisor=(document.getElementById('m3-inp-revisor')||{value:''}).value.trim();
+  var obs=(document.getElementById('m3-inp-obs')||{value:''}).value.trim();
+  if(!auditor||!ciclo||!controle){alert('Preencha Auditor, Ciclo e Controle.');return;}
+  if(!M3_DIMS.every(function(d){return m3Notas[d.id];})){alert('Atribua notas a todas as 5 dimensões.');return;}
+  if(M3_DIMS.some(function(d){return m3Notas[d.id]<3;})&&obs.length<10){
+    alert('Nota abaixo de 3 requer justificativa (mínimo 10 caracteres).');return;
+  }
+  var media=Math.round(M3_DIMS.reduce(function(s,d){return s+m3Notas[d.id];},0)/M3_DIMS.length*10)/10;
+  var lista=m3GetStorage();
+  if(m3EditandoId!==null){
+    for(var i=0;i<lista.length;i++){
+      if(lista[i].id===m3EditandoId){
+        lista[i].auditor=auditor;lista[i].ciclo=ciclo;lista[i].controle=controle;
+        lista[i].revisor=revisor;lista[i].obs=obs;lista[i].media=media;
+        lista[i].notas=JSON.parse(JSON.stringify(m3Notas));lista[i].data=hoje();
+        break;
+      }
+    }
+    m3EditandoId=null;
+    var btn=document.querySelector('#m3-pane-form .btn-primary');
+    if(btn) btn.innerHTML='💾 Salvar Avaliação';
+  } else {
+    lista.push({id:Date.now(),data:hoje(),auditor:auditor,ciclo:ciclo,controle:controle,
+      revisor:revisor,obs:obs,media:media,notas:JSON.parse(JSON.stringify(m3Notas))});
+  }
+  m3SetStorage(lista);
+  m3RefreshSelects();m3RenderPainelAuditor();m3RenderCiclo();m3RenderSummaryCards();m3RenderSummaryCards();
+  var msg=document.getElementById('m3-save-msg');
+  if(msg){msg.innerHTML='✅ Salvo! Média: <strong>'+media.toFixed(1)+'/5.0</strong>';msg.style.display='block';
+    setTimeout(function(){msg.style.display='none';},6000);}
+  m3Limpar();
+}
+
+function m3GetStorage(){return m3Data;}
+function m3SetStorage(lista){m3Data=lista;try{localStorage.setItem('themisia_m3',JSON.stringify(lista));}catch(e){}}
+function m3LoadFromStorage(){try{var s=JSON.parse(localStorage.getItem('themisia_m3')||'[]');if(s.length)m3Data=s;}catch(e){}}
+
+function m3RefreshSelects(){
+  var lista=m3GetStorage();
+  var auditores=lista.map(function(a){return a.auditor;}).filter(function(v,i,arr){return arr.indexOf(v)===i;}).sort();
+  var ciclos=lista.map(function(a){return a.ciclo;}).filter(function(v,i,arr){return arr.indexOf(v)===i;}).sort().reverse();
+  var selA=document.getElementById('m3-sel-auditor');
+  var selC=document.getElementById('m3-sel-ciclo');
+  if(selA){var pA=selA.value;selA.innerHTML='<option value="">👥 Todos os auditores</option>'+auditores.map(function(a){return '<option value="'+a+'"'+(a===pA?' selected':'')+'>'+a+'</option>';}).join('');}
+  if(selC){var pC=selC.value;selC.innerHTML='<option value="">Todos os ciclos</option>'+ciclos.map(function(c){return '<option value="'+c+'"'+(c===pC?' selected':'')+'>'+c+'</option>';}).join('');}
+}
+
+function m3RenderPainelAuditor(){
+  var sel=document.getElementById('m3-sel-auditor');
+  var nome=sel?sel.value:'';
+  var div=document.getElementById('m3-painel-auditor');
+  if(!div) return;
+  var todos=m3GetStorage();
+  function notaCor(n){return n>=4?'#2b8a3e':n>=3?'#1971c2':n>=2?'#e67700':'#c92a2a';}
+  if(!todos.length){div.innerHTML='<em style="color:#868e96;">Nenhuma avaliação registrada.</em>';return;}
+  var porAuditor={};
+  todos.forEach(function(a){
+    if(!porAuditor[a.auditor])porAuditor[a.auditor]={nome:a.auditor,count:0,soma:0,itens:[]};
+    porAuditor[a.auditor].count++;porAuditor[a.auditor].soma+=a.media;porAuditor[a.auditor].itens.push(a);
+  });
+  var auds=Object.keys(porAuditor).map(function(k){return porAuditor[k];}).sort(function(a,b){return(b.soma/b.count)-(a.soma/a.count);});
+  if(!nome){
+    div.innerHTML='<div style="display:flex;flex-direction:column;gap:6px;">'+
+      auds.map(function(a){
+        var mg=Math.round(a.soma/a.count*10)/10;
+        function notaCor2(n){return n>=4?'#2b8a3e':n>=3?'#1971c2':n>=2?'#e67700':'#c92a2a';}
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:#f8f9fa;border:1px solid var(--border);cursor:pointer;" onclick="m3VerAuditor(\''+a.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')">'+
+          '<div style="font-size:13px;font-weight:700;">'+a.nome+'</div>'+
+          '<div style="margin-left:auto;display:flex;gap:8px;align-items:center;">'+
+            '<span style="font-size:11px;color:#868e96;">'+a.count+' avaliação(ões)</span>'+
+            '<span style="font-size:15px;font-weight:800;color:'+notaCor2(mg)+'">'+mg.toFixed(1)+'</span>'+
+          '</div>'+
+        '</div>';
+      }).join('')+'</div>';
+  }else{
+    var itens=porAuditor[nome]?porAuditor[nome].itens:[];
+    if(!itens.length){div.innerHTML='<em style="color:#868e96;">Sem avaliações para este auditor.</em>';return;}
+    div.innerHTML='<div style="display:flex;flex-direction:column;gap:8px;">'+
+      itens.sort(function(a,b){return b.id-a.id;}).map(function(av){
+        function notaCor3(n){return n>=4?'#2b8a3e':n>=3?'#1971c2':n>=2?'#e67700':'#c92a2a';}
+        var dimHtml=M3_DIMS.map(function(d){
+          var n=av.notas[d.id]||0;
+          return '<div style="display:flex;gap:6px;align-items:center;font-size:11px;">'+
+            '<span style="min-width:160px;color:#555;">'+d.label+'</span>'+
+            '<span class="nota-badge '+M3_NOTAS_CSS[n]+'">'+M3_NOTAS_LABEL[n]+'</span></div>';
+        }).join('');
+        return '<div style="background:white;border:1px solid var(--border);border-radius:7px;overflow:hidden;">'+
+          '<div style="background:#f1f3f5;padding:8px 12px;display:flex;gap:8px;align-items:center;">'+
+            '<span style="font-size:11px;color:#868e96;">'+av.data+' · '+av.ciclo+' · '+av.controle+'</span>'+
+            '<span style="margin-left:auto;display:flex;gap:8px;align-items:center;">'+
+              '<button onclick="m3Editar('+av.id+')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1.5px solid var(--blue);background:white;color:var(--blue);font-weight:700;cursor:pointer;">✏️ Editar</button>'+
+              '<span style="font-size:16px;font-weight:800;color:'+notaCor3(av.media)+'">'+(av.media||0).toFixed(1)+'</span>'+
+            '</span>'+
+          '</div>'+
+          '<div style="padding:10px 12px;">'+dimHtml+
+            (av.obs?'<div style="margin-top:8px;font-size:12px;color:#555;border-top:1px solid var(--border);padding-top:6px;"><strong>Obs:</strong> '+av.obs+'</div>':'')+
+          '</div></div>';
+      }).join('')+'</div>';
+  }
+}
+
+function m3VerAuditor(nome){
+  var sel=document.getElementById('m3-sel-auditor');
+  if(sel) sel.value=nome;
+  m3RenderPainelAuditor();
+}
+
+function m3RenderCiclo(){
+  var sel=document.getElementById('m3-sel-ciclo');
+  var ciclo=sel?sel.value:'';
+  var div=document.getElementById('m3-painel-ciclo');
+  if(!div) return;
+  var todos=m3GetStorage();
+  var filtrados=ciclo?todos.filter(function(a){return a.ciclo===ciclo;}):todos;
+  if(!filtrados.length){div.innerHTML='<em style="color:#868e96;">Sem dados para exibição.</em>';return;}
+  var soma=filtrados.reduce(function(s,a){return s+a.media;},0);
+  var media=Math.round(soma/filtrados.length*10)/10;
+  function notaCor(n){return n>=4?'#2b8a3e':n>=3?'#1971c2':n>=2?'#e67700':'#c92a2a';}
+  div.innerHTML=
+    '<div style="background:#f8f9fa;border:1px solid var(--border);border-radius:7px;padding:12px 16px;margin-bottom:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'+
+      '<div><div style="font-size:11px;color:#868e96;">Ciclo</div><div style="font-weight:700;">'+(ciclo||'Todos')+'</div></div>'+
+      '<div><div style="font-size:11px;color:#868e96;">Avaliações</div><div style="font-weight:700;">'+filtrados.length+'</div></div>'+
+      '<div><div style="font-size:11px;color:#868e96;">Média Geral</div><div style="font-size:20px;font-weight:800;color:'+notaCor(media)+'">'+(media||0).toFixed(1)+'</div></div>'+
+    '</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;">'+
+    filtrados.sort(function(a,b){return b.media-a.media;}).map(function(av){
+      function notaCor2(n){return n>=4?'#2b8a3e':n>=3?'#1971c2':n>=2?'#e67700':'#c92a2a';}
+      return '<div style="display:flex;gap:8px;align-items:center;padding:7px 10px;border-radius:6px;background:white;border:1px solid var(--border);font-size:12px;">'+
+        '<span style="flex:1;font-weight:600;">'+av.auditor+'</span>'+
+        '<span style="color:#868e96;">'+av.controle+'</span>'+
+        '<span style="font-size:15px;font-weight:800;color:'+notaCor2(av.media)+'">'+(av.media||0).toFixed(1)+'</span>'+
+      '</div>';
+    }).join('')+'</div>';
+}
+
+function m3LimparTudo(){
+  if(!confirm('Apagar TODAS as avaliações? Esta ação não pode ser desfeita.')) return;
+  m3SetStorage([]);
+  m3RefreshSelects();m3RenderPainelAuditor();m3RenderCiclo();m3RenderSummaryCards();
+  alert('Avaliações apagadas.');
+}
+function m3ResetAll(){m3LimparTudo();}
+
+function m3DownloadCSV(lista,filename){
+  if(!lista.length){alert('Nenhuma avaliação para exportar.');return;}
+  var header=['Data','Auditor','Ciclo','Controle','Revisor'].concat(
+    M3_DIMS.map(function(d){return d.label;})
+  ).concat(['Média','Observações']);
+  var rows=lista.map(function(a){
+    return[a.data,a.auditor,a.ciclo,a.controle,a.revisor||''].concat(
+      M3_DIMS.map(function(d){return a.notas[d.id]||'';})
+    ).concat([a.media,a.obs||'']);
+  });
+  var csv=[header].concat(rows).map(function(r){
+    return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(',');
+  }).join('\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function m3ExportarAuditor(){
+  var sel=document.getElementById('m3-sel-auditor');
+  var nome=sel?sel.value:'';
+  var lista=m3GetStorage();
+  if(nome) lista=lista.filter(function(a){return a.auditor===nome;});
+  m3DownloadCSV(lista,'THEMISIA_'+(nome?nome.replace(/\s/g,'_'):'todos')+'.csv');
+}
+
+function m3ExportarCiclo(){
+  var ciclo=(document.getElementById('m3-sel-ciclo')||{value:''}).value;
+  var lista=m3GetStorage();
+  if(ciclo) lista=lista.filter(function(a){return a.ciclo===ciclo;});
+  m3DownloadCSV(lista,'THEMISIA_ciclo'+(ciclo?'_'+ciclo:'')+'.csv');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function buildReviewFromText2(){
+  var ta=document.getElementById('rev-pdf-text2');
+  var res=document.getElementById('rev-resultado2');
+  if(!ta||!res) return;
+  var text=ta.value.trim();
+  if(!text){alert('Cole o texto da FT antes de analisar.');return;}
+  // Re-use main review engine pointing at result div
+  var oldDiv=document.getElementById('rev-resultado');
+  var oldTA=document.getElementById('rev-pdf-text');
+  var originalText=oldTA?oldTA.value:'';
+  if(oldTA) oldTA.value=text;
+  if(oldDiv) oldDiv.style.display='none';
+  buildReviewFromText();
+  // Copy result
+  if(oldDiv){res.innerHTML=oldDiv.innerHTML;res.style.display='block';}
+  if(oldTA) oldTA.value=originalText;
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  autoLoadCPT();
+  m3Init();
+  document.addEventListener('click',function(e){
+    var wrap=document.getElementById('cs-wrap');
+    if(wrap&&!wrap.contains(e.target)){
+      var sr=document.getElementById('sr');
+      if(sr) sr.style.display='none';
+    }
+  });
+});
+</script>
+</body>
+</html>
